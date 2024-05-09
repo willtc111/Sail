@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type xy, div, mul, sub } from "$lib/point";
+  import { XY} from "$lib/point";
 
   export let dishWidth;
   export let dishHeight;
@@ -23,9 +23,13 @@
   }
 
   export const home = () => {
-    console.log("home")
-    offset = {x:0.0, y:0.0};
     zoom = 1.0;
+    centerOn(new XY(dishWidth, dishHeight).scale(1/2));
+  }
+
+  export const centerOn = (loc:XY) => {
+    offset = offsetFromCenterCoordinate(loc);
+    draw();
   }
 
   let test = 0;
@@ -36,8 +40,8 @@
     ctx.setTransform(zoom, 0, 0, zoom, offset.x, offset.y);
 
     // background
-    ctx.fillStyle='white';
-    ctx.fillRect(0,0,width,height);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, dishWidth, dishHeight);
 
     // border
     drawRect(
@@ -45,22 +49,39 @@
       width-20, height-20,
       undefined, '#000000'
     );
+    drawRect(
+      0, 0,
+      dishWidth, dishHeight,
+      undefined, '#0000ff'
+    );
 
     // debug
     test++;
     drawRect(
-      50 + 35*Math.cos(test/10),
-      50 + 35*Math.sin(test/10),
+      (dishWidth/2 - 10) + 35*Math.cos(test/10),
+      (dishHeight/2 - 10) + 35*Math.sin(test/10),
       20, 20,
       'purple', undefined
     );
 
+    drawRect(
+      dishWidth/2, dishHeight/2,
+      5, 5,
+      'purple', undefined
+    );
+    drawRect(
+      dishWidth/2, dishHeight/2,
+      -5, -5,
+      'purple', undefined
+    );
+
     // debug coordinate transform
-    drawRect(-10,-10,20,20,'red'); // center
-    drawRect(10, 10, 5, 5,'red'); // quadrant 1
-    drawRect(-10, 10, -5, 5,'red'); // quadrant 2
-    drawRect(-10, -10, -5, -5,'red'); // quadrant 3
-    drawRect(10, -10, 5, -5,'red'); // quadrant 4
+    drawRect(-10, -10, 20, 20, 'red'); // center
+    drawRect(0, 0, 1, 1, 'green'); // center
+    drawRect(10, 10, 5, 5, 'red'); // quadrant 1
+    drawRect(-10, 10, -5, 5, 'red'); // quadrant 2
+    drawRect(-10, -10, -5, -5, 'red'); // quadrant 3
+    drawRect(10, -10, 5, -5, 'red'); // quadrant 4
   }
 
   function drawRect(x:number, y:number, w:number, h:number, fill:string|undefined=undefined, stroke:string|undefined=undefined) {
@@ -77,22 +98,21 @@
     }
   }
 
-  let size_ratio = 1; //image_size / canvas_size;
   const zoomMagnitude = 1.1;
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 30;
 
-  let offset: xy = {x: 0.0, y: 0.0};
+  let offset: XY = new XY(0.0, 0.0);
   let zoom = 1.0;
 
   let dragging: boolean = false;
-  let dragStart: xy = { x: 0, y: 0 };
-  let clickStart: xy | undefined;
+  let dragStart: XY = new XY();
+  let clickStart: XY | undefined;
 
   function onMouseDown(event: MouseEvent) {
     dragging = true;
     let loc_client = getEventLocation(event);
-    dragStart = sub(loc_client, offset);
+    dragStart = loc_client.sub(offset);
     clickStart = loc_client;
   }
 
@@ -100,7 +120,7 @@
     let loc_client = getEventLocation(event);
 
     if (dragging) {
-      offset = sub(loc_client, dragStart);
+      offset = loc_client.sub(dragStart);
       draw();
     }
   }
@@ -110,29 +130,40 @@
     let loc_client = getEventLocation(event);
 
     if (clickStart != undefined && clickStart.x == loc_client.x && clickStart.y == loc_client.y) {
-      // Mouse didn't move, consider this a click
+      // Consider this a click
+      let loc_canvas = toCanvasFromClient(loc_client);
+      let loc_display = toDisplayFromCanvas(loc_canvas);
+      // debug
+      console.log(`click at disply ${loc_display.toStringFixed(1)}`);
+      centerOn(loc_display);
     }
     clickStart = undefined;
   }
 
   function onWheel(event: WheelEvent) {
-    let scale = event.deltaY > 0 ? 1/zoomMagnitude : zoomMagnitude
-    let newZoom = zoom * scale;
+    let zoomScale = event.deltaY > 0 ? 1/zoomMagnitude : zoomMagnitude
+    let newZoom = zoom * zoomScale;
     if (newZoom > MAX_ZOOM || newZoom < MIN_ZOOM) {
       return;
     }
     let loc_client = getEventLocation(event);
     let loc_canvas = toCanvasFromClient(loc_client);
     zoom = newZoom;
-    offset = sub(loc_canvas, mul(sub(loc_canvas, offset), scale));
+    offset = loc_canvas.sub(loc_canvas.sub(offset).scale(zoomScale));
     if (dragging) {
-      dragStart = sub(loc_client, offset);
+      dragStart = loc_client.sub(offset);
     }
     draw();
   }
 
-  function getEventLocation(event:MouseEvent): xy {
-    return { x: event.clientX, y: event.clientY };
+  function getEventLocation(event:MouseEvent): XY {
+    return new XY(event.clientX, event.clientY);
+  }
+
+  function offsetFromCenterCoordinate(center:XY): XY {
+    console.log(`Calculating offset for center point ${center}`);
+    let dimensions = new XY(width, height);
+    return center.scale(-1*zoom).add(dimensions.scale(1/2));
   }
 
   //
@@ -141,26 +172,20 @@
   // client space: coordinates within the window
   // canvas space: coordinates within the canvas element
   // display space: coordinates within the display (zoom/pan)
-  // source space: coordinates within the source material
   //
 
-  function toCanvasFromClient(loc:xy): xy {
+  function toCanvasFromClient(loc:XY): XY {
     let rect = canvas.getBoundingClientRect();
-    return sub(loc, {x: rect.left, y: rect.top});
+    return loc.sub({x: rect.left, y: rect.top});
   }
 
-  function toDisplayFromCanvas(loc:xy): xy {
-    return div(sub(loc, offset), zoom);
+  function toDisplayFromCanvas(loc:XY): XY {
+    return loc.sub(offset).scale(1/zoom);
   }
 
-  function toSourceFromDisplay(loc:xy): xy {
-    return mul(loc, size_ratio);
+  function toCanvasFromDisplay(loc:XY): XY {
+    return loc.scale(zoom).add(offset);
   }
-
-  function toDisplayFromSource(loc:xy): xy {
-    return div(loc, size_ratio);
-  }
-
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />
