@@ -1,7 +1,12 @@
 <script lang="ts">
+    import { Rectangle } from "$lib/drawing";
+  import { XY } from "$lib/point";
+  import { canvasInterface, drawBuffer } from "$lib/stores/canvasInterface";
 
-  export let draw: () => void;
-  export let home: () => void;
+  export let dishWidth: number;
+  export let dishHeight: number;
+
+  let {draw, centerOn} = $canvasInterface;
 
   let loopTimeoutId: NodeJS.Timeout | undefined;
   function pause() {
@@ -10,8 +15,48 @@
     fastforwarding = false;
   }
 
+  let test = 0;
   function step() {
-    console.log("step!");
+    test++;
+    let moverLoc = new XY(
+      (dishWidth/2 - 10) + 35*Math.cos(test/10),
+      (dishHeight/2 - 10) + 35*Math.sin(test/10)
+    );
+    drawBuffer.set([
+      new Rectangle(
+        new XY(0, 0),
+        new XY(dishWidth, dishHeight),
+        undefined, '#0000ff'
+      ),
+      new Rectangle(
+        moverLoc,
+        new XY(20, 20),
+        'purple'
+      ),
+      new Rectangle(
+        new XY(dishWidth/2, dishHeight/2),
+        new XY(5, 5),
+        'red'
+      ),
+      new Rectangle(
+        new XY(dishWidth/2, dishHeight/2),
+        new XY(-5, -5),
+        'blue'
+      ),
+      new Rectangle(
+        new XY(dishWidth/2, dishHeight/2),
+        new XY(-1, 1),
+        'green'
+      ),
+      new Rectangle(
+        new XY(dishWidth/2, dishHeight/2),
+        new XY(1, -1),
+        'yellow'
+      ),
+    ]);
+    if (fastforwarding) {
+      centerOn(moverLoc.add(new XY(10,10)),undefined,false);
+    }
     draw();
   }
 
@@ -19,7 +64,7 @@
     step();
     loopTimeoutId = setTimeout(
       () => loopStep(),
-      fastforwarding ? 1 : 100
+      fastforwarding ? 0 : 1000/60
     );
   }
 
@@ -40,6 +85,11 @@
   let fastforwarding = false;
   function fastforward() {
     fastforwarding = !fastforwarding;
+  }
+
+  function home() {
+    centerOn(new XY(dishWidth, dishHeight).scale(1/2), 1.0, false);
+    draw();
   }
 </script>
 

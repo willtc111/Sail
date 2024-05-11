@@ -5,15 +5,13 @@
   import { LightSwitch, Tab, TabGroup } from "@skeletonlabs/skeleton";
   import { invoke } from '@tauri-apps/api/tauri';
 
-  let draw: () => void;
-  let home: () => void;
   let tabSet: number = 0;
 </script>
 
 <div class="flex h-full p-1.5 gap-1.5">
   <!-- Display -->
   <div class="grow shrink ">
-    <Canvas bind:draw bind:home dishWidth={1000} dishHeight={1000}/>
+    <Canvas/>
     <div class="w-16 bg-red-500"></div>
   </div>
 
@@ -24,7 +22,7 @@
       <LightSwitch />
     </section>
     <section class="card">
-      <Controls bind:draw bind:home></Controls>
+      <Controls dishWidth={1000} dishHeight={1000}></Controls>
     </section>
     <section class="card grow">
       <TabGroup spacing={"space-y-6"}>

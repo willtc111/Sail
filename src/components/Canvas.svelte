@@ -1,13 +1,11 @@
 <script lang="ts">
   import { XY} from "$lib/point";
-
-  export let dishWidth;
-  export let dishHeight;
+  import { canvasInterface, drawBuffer } from "$lib/stores/canvasInterface";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
   $: if (canvas) {
-    ctx = canvas.getContext('2d');
+    ctx = canvas.getContext('2d', { alpha: false });
   }
 
   // Window dimensions (for responsive resizing)
@@ -22,66 +20,37 @@
     draw();
   }
 
-  export const home = () => {
-    zoom = 1.0;
-    centerOn(new XY(dishWidth, dishHeight).scale(1/2));
+  canvasInterface.set({
+    centerOn: centerOn,
+    draw: draw,
+  });
+
+  function centerOn(loc:XY, zoom:number|undefined=undefined, redraw:boolean=true) {
+    if (zoom != undefined) {
+      camera.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+    }
+    camera.offset = offsetFromCenterCoordinate(loc);
+    if (redraw) {
+      draw();
+    }
   }
 
-  export const centerOn = (loc:XY) => {
-    offset = offsetFromCenterCoordinate(loc);
-    draw();
-  }
-
-  let test = 0;
-  export const draw = () => {
+  function draw() {
     if (ctx == null) { return; }
 
     ctx.reset();
-    ctx.setTransform(zoom, 0, 0, zoom, offset.x, offset.y);
+    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, camera.offset.x, camera.offset.y);
 
-    // background
-    ctx.fillStyle = 'white';
-    ctx.fillRect(0, 0, dishWidth, dishHeight);
-
-    // border
+    // debug border
     drawRect(
-      10, 10,
-      width-20, height-20,
-      undefined, '#000000'
-    );
-    drawRect(
-      0, 0,
-      dishWidth, dishHeight,
-      undefined, '#0000ff'
-    );
-
-    // debug
-    test++;
-    drawRect(
-      (dishWidth/2 - 10) + 35*Math.cos(test/10),
-      (dishHeight/2 - 10) + 35*Math.sin(test/10),
-      20, 20,
-      'purple', undefined
-    );
-
-    drawRect(
-      dishWidth/2, dishHeight/2,
       5, 5,
-      'purple', undefined
-    );
-    drawRect(
-      dishWidth/2, dishHeight/2,
-      -5, -5,
-      'purple', undefined
+      width-10, height-10,
+      undefined, '#ff0000'
     );
 
-    // debug coordinate transform
-    drawRect(-10, -10, 20, 20, 'red'); // center
-    drawRect(0, 0, 1, 1, 'green'); // center
-    drawRect(10, 10, 5, 5, 'red'); // quadrant 1
-    drawRect(-10, 10, -5, 5, 'red'); // quadrant 2
-    drawRect(-10, -10, -5, -5, 'red'); // quadrant 3
-    drawRect(10, -10, 5, -5, 'red'); // quadrant 4
+    $drawBuffer.forEach((entity) => {
+      entity.draw(ctx!)
+    });
   }
 
   function drawRect(x:number, y:number, w:number, h:number, fill:string|undefined=undefined, stroke:string|undefined=undefined) {
@@ -102,8 +71,10 @@
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 30;
 
-  let offset: XY = new XY(0.0, 0.0);
-  let zoom = 1.0;
+  let camera = {
+    offset: new XY(0.0, 0.0),
+    zoom: 1.0,
+  };
 
   let dragging: boolean = false;
   let dragStart: XY = new XY();
@@ -112,7 +83,7 @@
   function onMouseDown(event: MouseEvent) {
     dragging = true;
     let loc_client = getEventLocation(event);
-    dragStart = loc_client.sub(offset);
+    dragStart = loc_client.sub(camera.offset);
     clickStart = loc_client;
   }
 
@@ -120,7 +91,7 @@
     let loc_client = getEventLocation(event);
 
     if (dragging) {
-      offset = loc_client.sub(dragStart);
+      camera.offset = loc_client.sub(dragStart);
       draw();
     }
   }
@@ -142,16 +113,16 @@
 
   function onWheel(event: WheelEvent) {
     let zoomScale = event.deltaY > 0 ? 1/zoomMagnitude : zoomMagnitude
-    let newZoom = zoom * zoomScale;
+    let newZoom = camera.zoom * zoomScale;
     if (newZoom > MAX_ZOOM || newZoom < MIN_ZOOM) {
       return;
     }
     let loc_client = getEventLocation(event);
     let loc_canvas = toCanvasFromClient(loc_client);
-    zoom = newZoom;
-    offset = loc_canvas.sub(loc_canvas.sub(offset).scale(zoomScale));
+    camera.zoom = newZoom;
+    camera.offset = loc_canvas.sub(loc_canvas.sub(camera.offset).scale(zoomScale));
     if (dragging) {
-      dragStart = loc_client.sub(offset);
+      dragStart = loc_client.sub(camera.offset);
     }
     draw();
   }
@@ -161,9 +132,8 @@
   }
 
   function offsetFromCenterCoordinate(center:XY): XY {
-    console.log(`Calculating offset for center point ${center}`);
     let dimensions = new XY(width, height);
-    return center.scale(-1*zoom).add(dimensions.scale(1/2));
+    return center.scale(-1*camera.zoom).add(dimensions.scale(1/2));
   }
 
   //
@@ -180,11 +150,11 @@
   }
 
   function toDisplayFromCanvas(loc:XY): XY {
-    return loc.sub(offset).scale(1/zoom);
+    return loc.sub(camera.offset).scale(1/camera.zoom);
   }
 
   function toCanvasFromDisplay(loc:XY): XY {
-    return loc.scale(zoom).add(offset);
+    return loc.scale(camera.zoom).add(camera.offset);
   }
 </script>
 
