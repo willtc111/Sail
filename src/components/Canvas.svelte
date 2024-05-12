@@ -1,6 +1,6 @@
 <script lang="ts">
   import { XY} from "$lib/point";
-  import { canvasInterface, drawBuffer } from "$lib/stores/canvasInterface";
+  import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
@@ -25,12 +25,12 @@
     draw: draw,
   });
 
-  function centerOn(loc:XY, zoom:number|undefined=undefined, redraw:boolean=true) {
+  function centerOn(loc:XY, zoom:number|undefined=undefined) {
     if (zoom != undefined) {
       camera.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
     }
     camera.offset = offsetFromCenterCoordinate(loc);
-    if (redraw) {
+    if ($canvasSettings.redraw) {
       draw();
     }
   }
@@ -91,8 +91,16 @@
     let loc_client = getEventLocation(event);
 
     if (dragging) {
+      if ($canvasSettings.tracking) {
+        // This is the first mouse movement to break the tracking
+        // so reset dragStart to ensure a smooth transition.
+        dragStart = loc_client.sub(camera.offset);
+        $canvasSettings.tracking = false;
+      }
       camera.offset = loc_client.sub(dragStart);
-      draw();
+      if ($canvasSettings.redraw) {
+        draw();
+      }
     }
   }
 
@@ -106,11 +114,11 @@
       let loc_display = toDisplayFromCanvas(loc_canvas);
       // debug
       console.log(`click at disply ${loc_display.toStringFixed(1)}`);
-      centerOn(loc_display);
     }
     clickStart = undefined;
   }
 
+  let tracking = false;
   function onWheel(event: WheelEvent) {
     let zoomScale = event.deltaY > 0 ? 1/zoomMagnitude : zoomMagnitude
     let newZoom = camera.zoom * zoomScale;
@@ -120,11 +128,18 @@
     let loc_client = getEventLocation(event);
     let loc_canvas = toCanvasFromClient(loc_client);
     camera.zoom = newZoom;
-    camera.offset = loc_canvas.sub(loc_canvas.sub(camera.offset).scale(zoomScale));
+    if (tracking) {
+      let center = new XY(width/2, height/2);
+      camera.offset = center.sub(center.sub(camera.offset).scale(zoomScale));
+    } else {
+      camera.offset = loc_canvas.sub(loc_canvas.sub(camera.offset).scale(zoomScale));
+    }
     if (dragging) {
       dragStart = loc_client.sub(camera.offset);
     }
-    draw();
+    if ($canvasSettings.redraw) {
+      draw();
+    }
   }
 
   function getEventLocation(event:MouseEvent): XY {

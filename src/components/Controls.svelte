@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Rectangle } from "$lib/drawing";
   import { XY } from "$lib/point";
-  import { canvasInterface, drawBuffer } from "$lib/stores/canvasInterface";
+  import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
 
   export let dishWidth: number;
   export let dishHeight: number;
@@ -54,8 +54,8 @@
         'yellow'
       ),
     ]);
-    if (fastforwarding) {
-      centerOn(moverLoc.add(new XY(10,10)),undefined,false);
+    if ($canvasSettings.tracking) {
+      centerOn(moverLoc.add(new XY(10,10)), undefined);
     }
     draw();
   }
@@ -76,6 +76,8 @@
   }
 
   let playing = false;
+  $: $canvasSettings.redraw = !playing;
+
   function play() {
     stopLoop();
     playing = true;
@@ -88,8 +90,20 @@
   }
 
   function home() {
-    centerOn(new XY(dishWidth, dishHeight).scale(1/2), 1.0, false);
-    draw();
+    $canvasSettings.tracking = false;
+    centerOn(new XY(dishWidth, dishHeight).scale(1/2), 1.0);
+  }
+
+  function trackSelection() {
+    $canvasSettings.tracking = !$canvasSettings.tracking;
+    if ($canvasSettings.tracking) {
+      centerOn(
+        new XY(
+          (dishWidth/2 - 10) + 35*Math.cos(test/10),
+          (dishHeight/2 - 10) + 35*Math.sin(test/10)
+        ).add(new XY(10,10)
+      ), undefined);
+    }
   }
 </script>
 
@@ -132,5 +146,12 @@
     disabled={!playing}
   >
     <i class="fa-solid fa-forward" />
+  </button>
+  <button
+    class="btn w-8 h-6 variant-filled-primary {$canvasSettings.tracking ? 'variant-filled-secondary' : ''}"
+    title="Fast"
+    on:click={trackSelection}
+  >
+    <i class="fa-solid fa-magnifying-glass" />
   </button>
 </div>
