@@ -51,7 +51,7 @@
     drawBuffer.set([
       new Axis(
         new XY(halfWidth, halfHeight),
-        new XY(10, 10),
+        new XY(50, 50),
         true
       ),
       new Rectangle(

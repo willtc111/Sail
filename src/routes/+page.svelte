@@ -31,7 +31,7 @@
       <LightSwitch />
     </section>
     <section class="card">
-      <Controls dishWidth={2000} dishHeight={2000}></Controls>
+      <Controls dishWidth={10000} dishHeight={10000}></Controls>
     </section>
     <section class="card grow">
       <TabGroup regionPanel={"!mt-0 !m-0 !p-0"}>

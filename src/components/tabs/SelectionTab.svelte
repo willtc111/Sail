@@ -1,8 +1,9 @@
 <script lang="ts">
   import RangeInput from "$components/RangeInput.svelte";
-    import type { XY } from "$lib/point";
+  import type { XY } from "$lib/point";
   import { invoke } from "@tauri-apps/api";
   import { onMount } from "svelte";
+  import PrecisionRangeInput from "$components/PrecisionRangeInput.svelte";
 
   let index = 0;
   let controls = {
@@ -46,7 +47,7 @@
   step={0.01}
   {update}
 />
-<RangeInput
+<PrecisionRangeInput
   name={"Rudder Angle"}
   bind:value={controls.rudder_angle}
   min={-3.14/2}
@@ -56,7 +57,10 @@
 />
 
 {#if selection != undefined}
-  <table class="w-full mt-2 border border-surface-700-200-token">
+  <table
+    class="w-full mt-2 border border-surface-700-200-token"
+    on:mousemove={getValues}
+  >
     <tbody>
       <tr>
         <td class="font-bold">Location</td>
