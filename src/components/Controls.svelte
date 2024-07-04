@@ -1,7 +1,9 @@
 <script lang="ts">
-    import { Rectangle } from "$lib/drawing";
+  import { Axis, Rectangle, Ship } from "$lib/drawing";
+  import { RollingAverage } from "$lib/performance";
   import { XY } from "$lib/point";
   import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
+  import { invoke } from "@tauri-apps/api";
 
   export let dishWidth: number;
   export let dishHeight: number;
@@ -15,53 +17,69 @@
     fastforwarding = false;
   }
 
-  let test = 0;
-  function step() {
-    test++;
-    let moverLoc = new XY(
-      (dishWidth/2 - 10) + 35*Math.cos(test/10),
-      (dishHeight/2 - 10) + 35*Math.sin(test/10)
-    );
+  let mspf = new RollingAverage();
+  let average: string | number = "---";
+  let lastTime = Date.now();
+
+  let stepCount = 0;
+  async function stepUpdate() {
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    stepCount = await invoke('step_simulation') as number;
+    await stepDraw();
+    let curTime = Date.now();
+    let elapsed = curTime - lastTime;
+    lastTime = curTime;
+    console.log(`elapsed: ${elapsed}`);
+    mspf.add(elapsed);
+    average = mspf.get() ?? "---";
+  }
+
+  stepDraw();
+
+  let trackLocation: XY|undefined = undefined;
+  async function stepDraw() {
+    let halfWidth = dishWidth / 2;
+    let halfHeight = dishHeight / 2;
     drawBuffer.set([
+      new Axis(
+        new XY(halfWidth, halfHeight),
+        new XY(10, 10),
+        true
+      ),
       new Rectangle(
-        new XY(0, 0),
-        new XY(dishWidth, dishHeight),
+        new XY(-halfWidth-1, -halfHeight-1),
+        new XY(dishWidth+2, dishHeight+2),
         undefined, '#0000ff'
-      ),
-      new Rectangle(
-        moverLoc,
-        new XY(20, 20),
-        'purple'
-      ),
-      new Rectangle(
-        new XY(dishWidth/2, dishHeight/2),
-        new XY(5, 5),
-        'red'
-      ),
-      new Rectangle(
-        new XY(dishWidth/2, dishHeight/2),
-        new XY(-5, -5),
-        'blue'
-      ),
-      new Rectangle(
-        new XY(dishWidth/2, dishHeight/2),
-        new XY(-1, 1),
-        'green'
-      ),
-      new Rectangle(
-        new XY(dishWidth/2, dishHeight/2),
-        new XY(1, -1),
-        'yellow'
-      ),
+      )
     ]);
+
+    let ships = await invoke('get_population') as any[];
+    ships = ships.map(s => new Ship(
+      XY.from(s.center),
+      s.hull.map((xy: { x: number; y: number; }) => XY.from(xy)),
+      s.sail.map((xy: { x: number; y: number; }) => XY.from(xy)),
+      s.rudder.map((xy: { x: number; y: number; }) => XY.from(xy)),
+      'brown', 'white'));
+    ships.forEach(d => drawBuffer.add(d));
+
+    trackLocation = ships[0].center;
     if ($canvasSettings.tracking) {
-      centerOn(moverLoc.add(new XY(10,10)), undefined);
+      centerOn(trackLocation!, undefined);
     }
     draw();
+    console.log("Drew");
   }
 
   function loopStep() {
-    step();
+    stepUpdate();
     loopTimeoutId = setTimeout(
       () => loopStep(),
       fastforwarding ? 0 : 1000/60
@@ -81,6 +99,7 @@
   function play() {
     stopLoop();
     playing = true;
+    mspf.clear();
     loopStep();
   }
 
@@ -91,18 +110,15 @@
 
   function home() {
     $canvasSettings.tracking = false;
-    centerOn(new XY(dishWidth, dishHeight).scale(1/2), 1.0);
+    centerOn(new XY(0.0, 0.0), 1.0);
   }
 
   function trackSelection() {
-    $canvasSettings.tracking = !$canvasSettings.tracking;
-    if ($canvasSettings.tracking) {
-      centerOn(
-        new XY(
-          (dishWidth/2 - 10) + 35*Math.cos(test/10),
-          (dishHeight/2 - 10) + 35*Math.sin(test/10)
-        ).add(new XY(10,10)
-      ), undefined);
+    if (trackLocation) {
+      $canvasSettings.tracking = !$canvasSettings.tracking;
+      if ($canvasSettings.tracking) {
+        centerOn(trackLocation, undefined);
+      }
     }
   }
 </script>
@@ -117,28 +133,31 @@
   </button>
   <button
     class="btn w-8 h-6 variant-filled-primary"
-    title="Pause"
-    on:click={pause}
-    disabled={!playing}
-  >
-    <i class="fa fa-pause" />
-  </button>
-  <button
-    class="btn w-8 h-6 variant-filled-primary"
     title="Step"
-    on:click={step}
+    on:click={stepUpdate}
     disabled={playing}
   >
     <i class="fa-solid fa-forward-step" />
   </button>
-  <button
-    class="btn w-8 h-6 variant-filled-primary"
-    title="Play"
-    on:click={play}
-    disabled={playing}
-  >
-    <i class="fa-solid fa-play" />
-  </button>
+  {#if playing}
+    <button
+      class="btn w-8 h-6 variant-filled-primary"
+      title="Pause"
+      on:click={pause}
+      disabled={!playing}
+    >
+      <i class="fa fa-pause" />
+    </button>
+  {:else}
+    <button
+      class="btn w-8 h-6 variant-filled-primary"
+      title="Play"
+      on:click={play}
+      disabled={playing}
+    >
+      <i class="fa-solid fa-play" />
+    </button>
+  {/if}
   <button
     class="btn w-8 h-6 variant-filled-primary {fastforwarding ? 'variant-filled-secondary' : ''}"
     title="Fast"
@@ -154,4 +173,5 @@
   >
     <i class="fa-solid fa-magnifying-glass" />
   </button>
+  <span class="w-12 overflow-hidden">{average}</span>
 </div>

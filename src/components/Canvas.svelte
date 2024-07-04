@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Rectangle } from "$lib/drawing";
   import { XY} from "$lib/point";
   import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
 
@@ -6,6 +7,7 @@
   let ctx: CanvasRenderingContext2D | null;
   $: if (canvas) {
     ctx = canvas.getContext('2d', { alpha: false });
+    centerOn(new XY(0,0), 1);
   }
 
   // Window dimensions (for responsive resizing)
@@ -39,32 +41,12 @@
     if (ctx == null) { return; }
 
     ctx.reset();
-    ctx.setTransform(camera.zoom, 0, 0, camera.zoom, camera.offset.x, camera.offset.y);
-
-    // debug border
-    drawRect(
-      5, 5,
-      width-10, height-10,
-      undefined, '#ff0000'
-    );
+    // Negate Y zoom to flip canvas to be "normal" coordinates
+    ctx.setTransform(camera.zoom, 0, 0, -camera.zoom, camera.offset.x, camera.offset.y);
 
     $drawBuffer.forEach((entity) => {
       entity.draw(ctx!)
     });
-  }
-
-  function drawRect(x:number, y:number, w:number, h:number, fill:string|undefined=undefined, stroke:string|undefined=undefined) {
-    if (!ctx || (fill == undefined && stroke == undefined)) { console.log("nope"); return; }
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    if (fill != undefined) {
-      ctx.fillStyle=fill;
-      ctx.fill();
-    }
-    if (stroke != undefined) {
-      ctx.strokeStyle=stroke;
-      ctx.stroke();
-    }
   }
 
   const zoomMagnitude = 1.1;
@@ -118,7 +100,6 @@
     clickStart = undefined;
   }
 
-  let tracking = false;
   function onWheel(event: WheelEvent) {
     let zoomScale = event.deltaY > 0 ? 1/zoomMagnitude : zoomMagnitude
     let newZoom = camera.zoom * zoomScale;
@@ -128,7 +109,7 @@
     let loc_client = getEventLocation(event);
     let loc_canvas = toCanvasFromClient(loc_client);
     camera.zoom = newZoom;
-    if (tracking) {
+    if ($canvasSettings.tracking) {
       let center = new XY(width/2, height/2);
       camera.offset = center.sub(center.sub(camera.offset).scale(zoomScale));
     } else {
@@ -148,7 +129,7 @@
 
   function offsetFromCenterCoordinate(center:XY): XY {
     let dimensions = new XY(width, height);
-    return center.scale(-1*camera.zoom).add(dimensions.scale(1/2));
+    return center.scale(-1*camera.zoom).flipY().add(dimensions.scale(1/2));
   }
 
   //
@@ -165,11 +146,11 @@
   }
 
   function toDisplayFromCanvas(loc:XY): XY {
-    return loc.sub(camera.offset).scale(1/camera.zoom);
+    return loc.sub(camera.offset).scale(1/camera.zoom).flipY();
   }
 
   function toCanvasFromDisplay(loc:XY): XY {
-    return loc.scale(camera.zoom).add(camera.offset);
+    return loc.flipY().scale(camera.zoom).add(camera.offset);
   }
 </script>
 

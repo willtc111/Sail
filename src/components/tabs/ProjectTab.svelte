@@ -1,14 +1,17 @@
 <script lang="ts">
+  import { invoke } from "@tauri-apps/api";
 
-function startNew() {
-  console.log("Starting new project");
-}
-function load() {
-  console.log("Loading project");
-}
-function save() {
-  console.log("Saving project");
-}
+
+  async function startNew() {
+    console.log("Starting new project");
+    await invoke('reset_simulation');
+  }
+  async function load() {
+    console.log("Loading project");
+  }
+  async function save() {
+    console.log("Saving project");
+  }
 
 </script>
 

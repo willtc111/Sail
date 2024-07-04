@@ -1,18 +1,33 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use rand::{Rng, rngs::StdRng, SeedableRng};
+use simulation::Simulation;
 use std::sync::Mutex;
 
+mod geometry;
+mod simulation;
+mod drawing;
+
+
 fn main() {
-  let seed:u64 = 123456; //123
-  let mut random = StdRng::seed_from_u64(seed);
+
+  simulation::test_bound_angle();
 
   tauri::Builder::default()
   .manage(
-    Mutex::new(random)
+    Mutex::new(Simulation::new(12345, 0.0, 5.0))
   )
   .invoke_handler(tauri::generate_handler![
+    geometry::test_geometry,
+    simulation::reset_simulation,
+    simulation::step_simulation,
+    simulation::get_population,
+    simulation::debug_physics,
+    simulation::debug_coefficients,
+    simulation::get_sim_settings,
+    simulation::set_sim_settings,
+    simulation::get_ship,
+    simulation::set_ship_controls,
   ])
   .run(tauri::generate_context!())
   .expect("error while running tauri application");

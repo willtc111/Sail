@@ -56,10 +56,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 900,
+        "width": 800,
         "resizable": true,
-        "title": "Petri",
-        "width": 800
+        "title": "Petri"
       }
     ]
   }

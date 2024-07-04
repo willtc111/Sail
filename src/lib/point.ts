@@ -10,6 +10,10 @@ export class XY {
     this.y = y;
   }
 
+  static from(xy: {x: number, y: number}): XY {
+    return new XY(xy.x, xy.y);
+  }
+
   add(other:xy): XY {
     return new XY(
       this.x + other.x,
@@ -42,6 +46,13 @@ export class XY {
     return new XY(
       this.x  * s,
       this.y  * s
+    );
+  }
+
+  flipY(): XY {
+    return new XY(
+      this.x,
+      this.y * -1
     );
   }
 

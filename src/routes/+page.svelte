@@ -1,18 +1,27 @@
 <script lang="ts">
   import Canvas from "$components/Canvas.svelte";
   import Controls from "$components/Controls.svelte";
+  import ForcesGraph from "$components/tabs/physics/ForcesGraph.svelte";
+  import PhysicsDebug from "$components/tabs/physics/PhysicsDebug.svelte";
   import ProjectTab from "$components/tabs/ProjectTab.svelte";
+  import SelectionTab from "$components/tabs/SelectionTab.svelte";
+  import SettingsTab from "$components/tabs/SettingsTab.svelte";
   import { LightSwitch, Tab, TabGroup } from "@skeletonlabs/skeleton";
-  import { invoke } from '@tauri-apps/api/tauri';
 
-  let tabSet: number = 0;
+  // Window dimensions (for responsive resizing)
+  let innerWidth: number;
+  let innerHeight: number;
+  $: cardHeight = innerHeight - 136;
+
+  let tabSet: number = 3;
 </script>
 
-<div class="flex h-full p-1.5 gap-1.5">
+<svelte:window bind:innerWidth bind:innerHeight />
+
+<div class="h-full flex p-1.5 gap-1.5">
   <!-- Display -->
-  <div class="grow shrink ">
+  <div class="grow shrink">
     <Canvas/>
-    <div class="w-16 bg-red-500"></div>
   </div>
 
   <!-- Info/Controls -->
@@ -22,24 +31,25 @@
       <LightSwitch />
     </section>
     <section class="card">
-      <Controls dishWidth={1000} dishHeight={1000}></Controls>
+      <Controls dishWidth={2000} dishHeight={2000}></Controls>
     </section>
     <section class="card grow">
-      <TabGroup spacing={"space-y-6"}>
+      <TabGroup regionPanel={"!mt-0 !m-0 !p-0"}>
         <Tab bind:group={tabSet} name="tab1" value={0}>Project</Tab>
-        <Tab bind:group={tabSet} name="tab2" value={1}>Dish</Tab>
+        <Tab bind:group={tabSet} name="tab2" value={1}>Settings</Tab>
         <Tab bind:group={tabSet} name="tab3" value={2}>Selection</Tab>
-        <Tab bind:group={tabSet} name="tab4" value={3}>Overview</Tab>
+        <Tab bind:group={tabSet} name="tab4" value={3}>Physics</Tab>
         <!-- Tab Panels --->
-        <div slot="panel" class="-mt-2 mx-2 mb-2">
+        <div slot="panel" class="p-2 overflow-y-auto" style="height: {cardHeight}px;">
           {#if tabSet === 0}
-            <ProjectTab></ProjectTab>
+            <ProjectTab/>
           {:else if tabSet === 1}
-            (tab panel 2 contents)
+            <SettingsTab/>
           {:else if tabSet === 2}
-            (tab panel 3 contents)
+            <SelectionTab />
           {:else if tabSet === 3}
-            (tab panel 4 contents)
+            <PhysicsDebug />
+            <ForcesGraph/>
           {/if}
         </div>
       </TabGroup>

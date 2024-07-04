@@ -12,20 +12,9 @@
     px-1
     border
   ;}
-
-  .gene-unselected { @apply
-    bg-surface-200 dark:bg-surface-700 border-surface-900-50-token
-  ;}
-
-  .gene-selected-main { @apply
-    bg-primary-200 dark:bg-primary-700 border-primary-600-300-token
-  ;}
-
-  .gene-selected-a { @apply
-    bg-success-200 dark:bg-success-700 border-success-600-300-token
-  ;}
-
-  .gene-selected-b { @apply
-    bg-error-200 dark:bg-error-700 border-error-600-300-token
-  ;}
+  /* .tab-panel { @apply
+    pt-0
+    !mt-2
+    !mb-0
+  ;} */
 }
