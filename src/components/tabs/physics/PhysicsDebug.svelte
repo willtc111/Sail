@@ -71,7 +71,7 @@
     parameters.velocity.x = Math.cos(temp_parameters.move_angle) * temp_parameters.move_speed;
     parameters.velocity.y = Math.sin(temp_parameters.move_angle) * temp_parameters.move_speed;
 
-    let shapes = await invoke('debug_physics', parameters) as {
+    let shapes = await invoke('debug_ship_physics', parameters) as {
       ship: any,
       forces: any[]
     };

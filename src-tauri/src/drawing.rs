@@ -2,7 +2,8 @@ use serde::Serialize;
 
 use crate::{
   geometry::Vec2D,
-  simulation::{Force, Ship, HULL_LENGTH, HULL_WIDTH, RUDDER_LENGTH, SAIL_WIDTH}
+  ship::{Ship, HULL_LENGTH, HULL_WIDTH, RUDDER_LENGTH, SAIL_WIDTH},
+  physics::Force
 };
 
 // Ship drawing constants
@@ -86,12 +87,7 @@ impl Arrow {
     }
   }
   pub fn from_force(force: &Force) -> Self {
-    Self {
-      start: force.loc,
-      end: force.loc + force.vec,
-      width: 0.5,
-      head_size: 1,
-    }
+    Self::new(force.loc, force.loc + force.vec, 0.5, 1)
   }
 }
 
