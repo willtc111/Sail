@@ -1,4 +1,3 @@
-
 export type xy = { x: number, y: number };
 
 export class XY {
@@ -54,6 +53,14 @@ export class XY {
       this.x,
       this.y * -1
     );
+  }
+
+  magnitude(): number {
+    return Math.sqrt(this.x*this.x + this.y*this.y);
+  }
+
+  direction(): number {
+    return Math.atan2(this.y, this.x);
   }
 
   toString() {

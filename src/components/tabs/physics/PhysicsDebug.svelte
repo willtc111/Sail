@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { Arrow, Rectangle, Ship } from "$lib/drawing";
+  import { Arrow, Ship } from "$lib/drawing";
   import { XY } from "$lib/point";
   import { invoke } from '@tauri-apps/api/tauri';
   import RangeInput from "../../RangeInput.svelte";
+  import { selection } from "$lib/stores/selection";
+  import type { ShipData } from "$lib/types";
 
   // Canvas dimensions
   let width = 300;
@@ -17,7 +19,7 @@
 
   let temp_parameters = {
     move_angle: 0.18,
-    move_speed: 1.0
+    move_speed: 1.0,
   }
   let parameters = {
     wind_angle: 1.57,
@@ -46,6 +48,22 @@
     hull: true,
     rudder: false,
   }
+
+  async function loadFromSelection() {
+    let ship = await invoke('get_ship', {index: $selection}) as ShipData;
+    parameters.velocity = XY.from(ship.vel);
+    temp_parameters.move_angle = parameters.velocity.direction();
+    temp_parameters.move_speed = parameters.velocity.magnitude();
+    parameters.rot_velocity = ship.rot_vel;
+    parameters.heading = ship.heading;
+    parameters.sail_angle = ship.sail_angle;
+    parameters.rudder_angle = ship.rudder_angle;
+    let settings = await invoke('get_sim_settings') as { wind_angle: number, wind_speed: number };
+    parameters.wind_angle = settings.wind_angle;
+    parameters.wind_speed = settings.wind_speed;
+    update();
+  }
+
   async function update() {
     if (ctx == null) { return; }
     console.log("updating physics demo");
@@ -57,7 +75,6 @@
       ship: any,
       forces: any[]
     };
-    console.log(shapes);
     let ship = new Ship(
       shapes.ship.center,
       shapes.ship.hull,
@@ -75,19 +92,19 @@
     forces.push(forceToArrow(shapes.forces[0], colors.wind)); // wind
     forces.push(forceToArrow(shapes.forces[2], colors.apparent_wind)); // apparent wind
     forces.push(forceToArrow(shapes.forces[3], colors.velocity)); // rotation
-    if (parameters.wind_speed != 0 || temp_parameters.move_speed != 0) {
+    if (parameters.wind_speed != 0 || parameters.velocity.magnitude() != 0) {
       if (forceToggles.sail) {
         forces.push(forceToArrow(shapes.forces[4], colors.sail_lift)); // sail lift
         forces.push(forceToArrow(shapes.forces[5], colors.sail_drag)); // sail drag
       }
     }
-    if (temp_parameters.move_speed != 0) {
+    if (parameters.velocity.magnitude() != 0) {
       if (forceToggles.keel) {
         forces.push(forceToArrow(shapes.forces[6], colors.keel_lift, 0.5)); // keel lift
         forces.push(forceToArrow(shapes.forces[7], colors.keel_drag, 0.5)); // keel drag
       }
     }
-    if (temp_parameters.move_speed != 0 || parameters.rot_velocity != 0) {
+    if (parameters.velocity.magnitude() != 0 || parameters.rot_velocity != 0) {
       if (forceToggles.rudder) {
         forces.push(forceToArrow(shapes.forces[8], colors.rudder_lift, 0.125)); // rudder lift
         forces.push(forceToArrow(shapes.forces[9], colors.rudder_drag, 0.125)); // rudder drag
@@ -114,22 +131,41 @@
     {height}
     class="w-full h-full rounded-container-token"
   />
-  <div class="">
-    <span class="font-bold">S</span>
-    <span class="font-bold" style="color: {colors.sail_lift};">L</span>
-    <span class="font-bold" style="color: {colors.sail_drag};">D</span>
-    <input type="checkbox" bind:checked={forceToggles.sail} on:change={update}>
-    <span class="font-bold">K</span>
-    <span class="font-bold" style="color: {colors.keel_lift};">L</span>
-    <span class="font-bold" style="color: {colors.keel_drag};">D</span>
-    <input type="checkbox" bind:checked={forceToggles.keel} on:change={update}>
-    <span class="font-bold">H</span>
-    <span class="font-bold" style="color: {colors.hull_drag};">D</span>
-    <input type="checkbox" bind:checked={forceToggles.hull} on:change={update}>
-    <span class="font-bold">R</span>
-    <span class="font-bold" style="color: {colors.rudder_lift};">L</span>
-    <span class="font-bold" style="color: {colors.rudder_drag};">D</span>
-    <input type="checkbox" bind:checked={forceToggles.rudder} on:change={update}>
+  <div class="flex justify-between">
+    <div class="flex gap-1">
+      <label>
+        <span class="font-bold">S</span>
+        <span class="font-bold" style="color: {colors.sail_lift};">L</span>
+        <span class="font-bold" style="color: {colors.sail_drag};">D</span>
+        <input type="checkbox" bind:checked={forceToggles.sail} on:change={update}>
+      </label>
+      <label>
+        <span class="font-bold">K</span>
+        <span class="font-bold" style="color: {colors.keel_lift};">L</span>
+        <span class="font-bold" style="color: {colors.keel_drag};">D</span>
+        <input type="checkbox" bind:checked={forceToggles.keel} on:change={update}>
+      </label>
+      <label>
+        <span class="font-bold">H</span>
+        <span class="font-bold" style="color: {colors.hull_drag};">D</span>
+        <input type="checkbox" bind:checked={forceToggles.hull} on:change={update}>
+      </label>
+      <label>
+        <span class="font-bold">R</span>
+        <span class="font-bold" style="color: {colors.rudder_lift};">L</span>
+        <span class="font-bold" style="color: {colors.rudder_drag};">D</span>
+        <input type="checkbox" bind:checked={forceToggles.rudder} on:change={update}>
+      </label>
+    </div>
+    <div class="">
+      <button
+        disabled={$selection == null}
+        on:click={loadFromSelection}
+        class="btn variant-filled-primary"
+      >
+        Load Selection
+      </button>
+    </div>
   </div>
   <div class="py-1">
     <RangeInput
@@ -147,7 +183,7 @@
       bind:value={parameters.wind_speed}
       min={0}
       max={10.0}
-      step={0.1}
+      step={0.01}
       reset={1.0}
       {update}
     />
@@ -191,7 +227,7 @@
       bind:value={temp_parameters.move_speed}
       min={0}
       max={10}
-      step={0.1}
+      step={0.01}
       reset={0.0}
       {update}
     />
@@ -201,7 +237,7 @@
       bind:value={parameters.rot_velocity}
       min={-5}
       max={5}
-      step={0.1}
+      step={0.01}
       reset={0.0}
       {update}
     />

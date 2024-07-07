@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { Rectangle } from "$lib/drawing";
   import { XY} from "$lib/point";
-  import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
+  import { canvasClick, canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
@@ -94,8 +93,7 @@
       // Consider this a click
       let loc_canvas = toCanvasFromClient(loc_client);
       let loc_display = toDisplayFromCanvas(loc_canvas);
-      // debug
-      console.log(`click at disply ${loc_display.toStringFixed(1)}`);
+      $canvasClick = loc_display;
     }
     clickStart = undefined;
   }

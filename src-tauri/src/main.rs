@@ -27,6 +27,7 @@ fn main() {
     simulation::get_sim_settings,
     simulation::set_sim_settings,
     simulation::get_ship,
+    simulation::get_ship_id,
     simulation::set_ship_controls,
   ])
   .run(tauri::generate_context!())

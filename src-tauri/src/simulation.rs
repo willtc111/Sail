@@ -43,6 +43,18 @@ impl Simulation {
       0.0,
       PI, -0.0, 0.0
     ));
+    ships.push(Ship::new(
+      Vec2D::new(50.0, 50.0),
+      Vec2D::new(0.0, 0.0),
+      0.0,
+      PI, -0.0, 0.0
+    ));
+    ships.push(Ship::new(
+      Vec2D::new(50.0, 75.0),
+      Vec2D::new(0.0, 0.0),
+      0.0,
+      PI, -0.0, 0.0
+    ));
     return ships;
   }
   pub fn step(&mut self) {
@@ -86,7 +98,7 @@ pub const SAIL_WIDTH: f64 = 7.0;
 pub const SAIL_HEIGHT: f64 = 10.0;
 pub const SAIL_AREA: f64 = SAIL_WIDTH * SAIL_HEIGHT / 2.0; // half because triangle
 pub const KEEL_LENGTH: f64 = 2.0;
-pub const KEEL_HEIGHT: f64 = 1.0;
+pub const KEEL_HEIGHT: f64 = 2.0;
 pub const KEEL_AREA: f64 = KEEL_LENGTH * KEEL_HEIGHT;
 pub const RUDDER_LENGTH: f64 = 0.5;
 pub const RUDDER_HEIGHT: f64 = 1.0;
@@ -192,12 +204,6 @@ impl Ship {
       let drag = water_vel.unit().scale(drag_magnitude);
       forces.push(Force::new(String::from("Keel Lift"), self.loc, lift));
       forces.push(Force::new(String::from("Keel Drag"), self.loc, drag));
-      // Calculate hull drag
-      // let apparent_width = f64::cos(aoa).abs() * HULL_WIDTH + f64::sin(aoa).abs() * HULL_LENGTH;
-      // let hull_area = HULL_DEPTH * apparent_width;
-      // let drag_magnitude = calculate_parasitic_drag(FRICTION_COEFFICIENT, hull_area, water_vel.magnitude());
-      // let drag = water_vel.unit().scale(drag_magnitude);
-      // forces.push(Force::new(String::from("Hull Drag"), self.loc, drag));
     }
     if self.vel.magnitude() != 0.0 || self.rot_vel != 0.0 {
       // Calculate angle of attack on the rudder
@@ -368,6 +374,18 @@ pub fn get_ship(sim: State<Mutex<Simulation>>, index: usize) -> Ship {
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub fn get_ship_id(sim: State<Mutex<Simulation>>, loc: Vec2D) -> Option<usize> {
+  let sim = sim.lock().unwrap();
+  for i in 0..sim.get_population().len() {
+    let ship = sim.get_population()[i];
+    if ship.loc.dist(loc) < HULL_LENGTH / 2.0 {
+      return Some(i);
+    }
+  }
+  return Option::None;
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub fn set_ship_controls(sim: State<Mutex<Simulation>>, index: usize, sail_angle: f64, rudder_angle: f64) {
   let mut sim = sim.lock().unwrap();
   let ship = sim.update_ship_controls(index, sail_angle, rudder_angle);
@@ -411,8 +429,7 @@ pub fn debug_physics(wind_angle: f64, wind_speed: f64, velocity: Vec2D, rot_velo
   };
   
   // DEBUG SAILING
-  println!("");
-  ship.sail(wind_angle, wind_speed);
+  // ship.sail(wind_angle, wind_speed);
 
   return shapes;
 }

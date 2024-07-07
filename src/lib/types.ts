@@ -7,9 +7,11 @@ export type Shape = {
   edges: [number, number][]
 };
 
-export type Ship = {
-  center: XY,
+export type ShipData = {
+  loc: XY,
+  vel: XY,
+  rot_vel: number,
   heading: number,
-  rudder_angle: number,
   sail_angle: number,
-};
+  rudder_angle: number,
+}

@@ -3,6 +3,7 @@
   import { RollingAverage } from "$lib/performance";
   import { XY } from "$lib/point";
   import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
+  import { selection } from "$lib/stores/selection";
   import { invoke } from "@tauri-apps/api";
 
   export let dishWidth: number;
@@ -37,7 +38,7 @@
     let curTime = Date.now();
     let elapsed = curTime - lastTime;
     lastTime = curTime;
-    console.log(`elapsed: ${elapsed}`);
+    // console.log(`elapsed: ${elapsed}`);
     mspf.add(elapsed);
     average = mspf.get() ?? "---";
   }
@@ -70,12 +71,8 @@
       'brown', 'white'));
     ships.forEach(d => drawBuffer.add(d));
 
-    trackLocation = ships[0].center;
-    if ($canvasSettings.tracking) {
-      centerOn(trackLocation!, undefined);
-    }
+    trackSelection();
     draw();
-    console.log("Drew");
   }
 
   function loopStep() {
@@ -113,11 +110,24 @@
     centerOn(new XY(0.0, 0.0), 1.0);
   }
 
-  function trackSelection() {
-    if (trackLocation) {
+  function toggleTracking() {
+    if ($selection != null) {
       $canvasSettings.tracking = !$canvasSettings.tracking;
       if ($canvasSettings.tracking) {
-        centerOn(trackLocation, undefined);
+        trackSelection();
+      }
+    } else {
+      $canvasSettings.tracking = false;
+    }
+  }
+
+  $: $canvasSettings.tracking = $canvasSettings.tracking && $selection != null;
+
+  async function trackSelection() {
+    if ($selection != null) {
+      let ship = await invoke('get_ship', {index: $selection}) as {loc: XY};
+      if (ship != null && $canvasSettings.tracking) {
+        centerOn(XY.from(ship.loc), undefined);
       }
     }
   }
@@ -168,8 +178,9 @@
   </button>
   <button
     class="btn w-8 h-6 variant-filled-primary {$canvasSettings.tracking ? 'variant-filled-secondary' : ''}"
+    disabled={$selection == null}
     title="Fast"
-    on:click={trackSelection}
+    on:click={toggleTracking}
   >
     <i class="fa-solid fa-magnifying-glass" />
   </button>

@@ -6,7 +6,12 @@
   import ProjectTab from "$components/tabs/ProjectTab.svelte";
   import SelectionTab from "$components/tabs/SelectionTab.svelte";
   import SettingsTab from "$components/tabs/SettingsTab.svelte";
+  import { XY } from "$lib/point";
+  import { canvasClick } from "$lib/stores/canvasInterface";
+  import { selection } from "$lib/stores/selection";
   import { LightSwitch, Tab, TabGroup } from "@skeletonlabs/skeleton";
+  import { invoke } from "@tauri-apps/api";
+  import { onDestroy } from "svelte";
 
   // Window dimensions (for responsive resizing)
   let innerWidth: number;
@@ -14,6 +19,17 @@
   $: cardHeight = innerHeight - 136;
 
   let tabSet: number = 3;
+
+  const unsubscribe = canvasClick.subscribe((value: XY) => selectShip(value));
+  onDestroy(unsubscribe);
+  async function selectShip(loc: XY) {
+    let ship_id = await invoke('get_ship_id', {loc: loc}) as number|null;
+    console.log(`Click at ${loc} selected ship: ${ship_id}`);
+    $selection = ship_id;
+    if (ship_id != null && tabSet != 3) {
+      tabSet = 2;
+    }
+  }
 </script>
 
 <svelte:window bind:innerWidth bind:innerHeight />

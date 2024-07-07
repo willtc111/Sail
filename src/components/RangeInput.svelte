@@ -1,5 +1,4 @@
 <script lang="ts">
-
   export let name: string;
   export let color: string = '#000000';
   export let value: number;
@@ -34,7 +33,7 @@
     bind:value
     on:input={update}
     type="number"
-    class="basis-3/6 input text-right"
+    class="basis-3/6 input text-right border-l-2 border-l-black"
   >
   <input
     {name}
