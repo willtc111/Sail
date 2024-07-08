@@ -54,6 +54,11 @@ pub fn calculate_drag_coefficient(angle: f64) -> f64 {
   return cd;
 }
 
+pub fn calculate_apparent_wind(velocity: Vec2D, wind_angle: f64, wind_speed: f64) -> Vec2D {
+  let wind = Vec2D::from_angle(PI - wind_angle).scale(wind_speed);
+  // Subtract velocity because moving creates apparent wind in the opposite direction
+  return wind - velocity; 
+}
 
 #[tauri::command]
 pub fn debug_coefficients() -> (Vec<f64>, Vec<f64>) {

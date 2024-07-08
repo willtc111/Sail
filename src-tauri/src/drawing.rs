@@ -1,9 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-  geometry::Vec2D,
-  ship::{Ship, HULL_LENGTH, HULL_WIDTH, RUDDER_LENGTH, SAIL_WIDTH},
-  physics::Force
+  geometry::Vec2D, physics::Force, ship::{SquareRigShip, HULL_LENGTH, HULL_WIDTH, RUDDER_LENGTH, SAIL_WIDTH}
 };
 
 // Ship drawing constants
@@ -12,13 +10,13 @@ const HALF_HULL_LENGTH: f64 = HULL_LENGTH / 2.0;
 const HALF_SAIL_WIDTH: f64 = SAIL_WIDTH / 2.0;
 
 #[derive(Debug, Clone, Serialize)]
-pub struct ShipShape {
+pub struct SquareRigShipShape {
   center: Vec2D,
   hull: Vec<Vec2D>,
   sail: Vec<Vec2D>,
   rudder: Vec<Vec2D>,
 }
-impl ShipShape {
+impl SquareRigShipShape {
   pub fn default(scale: f64) -> Self {
     let center = Vec2D::new(0.0,0.0);
 
@@ -44,7 +42,7 @@ impl ShipShape {
     }
   }
 
-  pub fn new(ship: &Ship, default_ship: &ShipShape) -> Self {
+  pub fn new(ship: &SquareRigShip, default_ship: &Self) -> Self {
     let hull = default_ship.hull.iter()
       .map(|p|
         p.rotate(ship.heading) + ship.loc
@@ -93,6 +91,6 @@ impl Arrow {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PhysicsShapes {
-  pub ship: ShipShape,
+  pub ship: SquareRigShipShape,
   pub forces: Vec<Arrow>
 }

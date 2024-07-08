@@ -2,7 +2,12 @@ use std::f64::consts::PI;
 
 use serde::Serialize;
 
-use crate::{drawing::{Arrow, PhysicsShapes, ShipShape}, geometry::{bound_angle, Vec2D}, physics::{calculate_drag, calculate_force, calculate_lift, Force}, simulation::DELTA_TIME};
+use crate::{
+  drawing::{Arrow, PhysicsShapes, SquareRigShipShape},
+  geometry::{bound_angle, Vec2D},
+  physics::{calculate_apparent_wind, calculate_drag, calculate_force, calculate_lift, Force},
+  simulation::DELTA_TIME
+};
 
 
 pub const HULL_WIDTH: f64 = 3.0;
@@ -30,9 +35,13 @@ pub const DENSITY_WATER: f64 = 1027.0; // kg / m^3
 //  provides a maximum speed of about 1.5 * wind speed
 pub const FRICTION_COEFFICIENT: f64 = 0.007;
 
+pub trait Ship {
+  fn sail(&mut self, wind_angle: f64, wind_speed: f64);
+  fn forces(&self, wind_angle: f64, wind_speed: f64) -> Vec<Force>;
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct Ship {
+pub struct SquareRigShip {
   pub loc: Vec2D,
   pub vel: Vec2D,
   pub rot_vel: f64,
@@ -40,12 +49,13 @@ pub struct Ship {
   pub sail_angle: f64,
   pub rudder_angle: f64,
 }
-impl Ship {
+impl SquareRigShip {
   pub fn new(loc: Vec2D, vel: Vec2D, rot_vel: f64, heading: f64, sail_angle: f64, rudder_angle: f64) -> Self {
     Self { loc, vel, rot_vel, heading, sail_angle, rudder_angle }
   }
-
-  pub fn sail(&mut self, wind_angle: f64, wind_speed: f64) {
+}
+impl Ship for SquareRigShip {
+  fn sail(&mut self, wind_angle: f64, wind_speed: f64) {
     let f = self.forces(wind_angle, wind_speed);
     f.iter().for_each(|force|
       if force.loc == self.loc {
@@ -74,11 +84,11 @@ impl Ship {
     // println!("loc: {:?}", self.loc);
   }
 
-  pub fn forces(&self, wind_angle: f64, wind_speed: f64) -> Vec<Force> {
+  fn forces(&self, wind_angle: f64, wind_speed: f64) -> Vec<Force> {
     let mut forces = Vec::new();
 
     // Calculate angle of attack on sail
-    let apparent_wind = self.apparent_wind(wind_angle, wind_speed).scale(DELTA_TIME);
+    let apparent_wind = calculate_apparent_wind(self.vel, wind_angle, wind_speed).scale(DELTA_TIME);
     if apparent_wind.magnitude() != 0.0 {
       let mut aoa = bound_angle(self.heading + self.sail_angle - apparent_wind.to_angle());
       if aoa < 0.0 {
@@ -156,18 +166,13 @@ impl Ship {
     }
     return forces;
   }
-
-  pub fn apparent_wind(&self, wind_angle: f64, wind_speed: f64) -> Vec2D {
-    let wind = Vec2D::from_angle(PI - wind_angle).scale(wind_speed);
-    return wind - self.vel;
-  }
 }
 
 
 #[tauri::command(rename_all = "snake_case")]
 pub fn debug_ship_physics(wind_angle: f64, wind_speed: f64, velocity: Vec2D, rot_velocity: f64, heading: f64, sail_angle: f64, rudder_angle: f64) -> PhysicsShapes {
   // Create the specified ship
-  let ship = Ship::new(
+  let ship = SquareRigShip::new(
     Vec2D::new(0.0,0.0),
     velocity,
     rot_velocity,
@@ -185,7 +190,7 @@ pub fn debug_ship_physics(wind_angle: f64, wind_speed: f64, velocity: Vec2D, rot
 
   forces.insert(0, Force::new(String::from("Wind"), wind_source, wind_vec));
   forces.insert(1, Force::new(String::from("Velocity"), wind_source, velocity));
-  forces.insert(2, Force::new(String::from("Apparent Wind"), wind_source, ship.apparent_wind(wind_angle, wind_speed)));
+  forces.insert(2, Force::new(String::from("Apparent Wind"), wind_source, calculate_apparent_wind(velocity, wind_angle, wind_speed)));
   forces.insert(3, Force::new(String::from("Rotation"), rot_source, rot_vec));
 
   // forces.iter().for_each(|f| println!("{}", f.name));
@@ -195,9 +200,9 @@ pub fn debug_ship_physics(wind_angle: f64, wind_speed: f64, velocity: Vec2D, rot
   forces.iter().for_each(|force|
     arrows.push(Arrow::from_force(force))
   );
-  let default_ship: ShipShape = ShipShape::default(1.0);
+  let default_ship: SquareRigShipShape = SquareRigShipShape::default(1.0);
   let shapes = PhysicsShapes {
-    ship:ShipShape::new(&ship, &default_ship),
+    ship:SquareRigShipShape::new(&ship, &default_ship),
     forces: arrows
   };
   
