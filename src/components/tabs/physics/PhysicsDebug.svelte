@@ -17,18 +17,21 @@
     update();
   }
 
+  // let sail_max = 3.14;
+  let sail_max = Math.sqrt(7*7+7*7);
+
   let temp_parameters = {
-    move_angle: 0.18,
-    move_speed: 1.0,
+    move_angle: 0.0,
+    move_speed: 0.0,
   }
   let parameters = {
-    wind_angle: 1.57,
-    wind_speed: 0.0,
+    wind_angle: 0.0,
+    wind_speed: 5.0,
     velocity: new XY(0.0, 0.0),
     rot_velocity: 0.0,
-    heading: -0.31,
-    sail_angle: 0.0,
-    rudder_angle: 0.77
+    heading: 0.0,
+    sail: 0.0,
+    rudder_angle: 0.0
   };
   let colors = {
     velocity: '#ff0000',
@@ -47,7 +50,7 @@
     keel: false,
     hull: true,
     rudder: false,
-  }
+  };
 
   async function loadFromSelection() {
     let ship = await invoke('get_ship', {index: $selection}) as ShipData;
@@ -56,7 +59,7 @@
     temp_parameters.move_speed = parameters.velocity.magnitude();
     parameters.rot_velocity = ship.rot_vel;
     parameters.heading = ship.heading;
-    parameters.sail_angle = ship.sail_angle;
+    parameters.sail = ship.sail_angle;
     parameters.rudder_angle = ship.rudder_angle;
     let settings = await invoke('get_sim_settings') as { wind_angle: number, wind_speed: number };
     parameters.wind_angle = settings.wind_angle;
@@ -188,10 +191,10 @@
       {update}
     />
     <RangeInput
-      name={"Sail Angle"}
-      bind:value={parameters.sail_angle}
-      min={-3.14}
-      max={3.14}
+      name={"Sail Input"}
+      bind:value={parameters.sail}
+      min={-sail_max}
+      max={sail_max}
       step={0.01}
       {update}
     />

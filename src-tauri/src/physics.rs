@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use serde::Serialize;
 
-use crate::geometry::Vec2D;
+use crate::geometry::{invert_angle, Vec2D};
 
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -55,7 +55,7 @@ pub fn calculate_drag_coefficient(angle: f64) -> f64 {
 }
 
 pub fn calculate_apparent_wind(velocity: Vec2D, wind_angle: f64, wind_speed: f64) -> Vec2D {
-  let wind = Vec2D::from_angle(PI - wind_angle).scale(wind_speed);
+  let wind = Vec2D::from_angle(invert_angle(wind_angle)).scale(wind_speed);
   // Subtract velocity because moving creates apparent wind in the opposite direction
   return wind - velocity; 
 }

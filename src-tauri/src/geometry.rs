@@ -103,6 +103,10 @@ pub fn bound_angle(angle: f64) -> f64 {
   ((angle + PI).rem_euclid(2.0 * PI)) - PI
 }
 
+pub fn invert_angle(angle: f64) -> f64 {
+  bound_angle(angle + PI)
+}
+
 
 #[cfg(test)]
 mod tests {
