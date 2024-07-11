@@ -197,13 +197,14 @@ impl ForeAftRigShip {
     let bottom = 2.0 * SAIL_WIDTH_SQUARED;
     let max_sail_angle = f64::acos(top / bottom);
 
-    let relative_apparent_wind_angle = bound_angle(invert_angle(apparent_wind_angle) - self.heading);
-    self.sail_angle = if relative_apparent_wind_angle.abs() <= max_sail_angle {
+    let hull_relative_apparent_wind_angle = bound_angle(invert_angle(apparent_wind_angle) - self.heading);
+    self.sail_angle = if hull_relative_apparent_wind_angle.abs() <= max_sail_angle {
       // Sail is luffing
-      relative_apparent_wind_angle
+      hull_relative_apparent_wind_angle
     } else {
-      // Sail is taut
-      max_sail_angle * relative_apparent_wind_angle.signum()
+      // Sail is taut, and stays on the side of the wind that it is already on
+      let sail_relative_apparent_wind_angle = bound_angle(hull_relative_apparent_wind_angle - self.sail_angle);
+      max_sail_angle * sail_relative_apparent_wind_angle.signum()
     };
   }
 }
