@@ -210,11 +210,10 @@ impl ForeAftRigShip {
 impl Ship for ForeAftRigShip {
   fn sail(&mut self, wind_angle: f64, wind_speed: f64) {
     let f = self.forces(wind_angle, wind_speed);
-    f.iter().for_each(|force|
-      if force.loc == self.loc {
-        // Force is on the center of the ship, no rotation is needed
-        self.vel = self.vel + force.vec.scale(INVERSE_HULL_MASS);
-      } else {
+    f.iter().for_each(|force| {
+      // Force always changes the velocity
+      self.vel = self.vel + force.vec.scale(INVERSE_HULL_MASS);
+      if force.loc != self.loc {
         let offset = force.loc - self.loc;
         // Eliminate offset rotation
         let loc_rot = offset.rotate(-offset.to_angle());
@@ -225,7 +224,7 @@ impl Ship for ForeAftRigShip {
         self.vel = self.vel + direct_force.scale(INVERSE_HULL_MASS);
         self.rot_vel = self.rot_vel + torque * INVERSE_HULL_MASS;
       }
-    );
+    });
 
     // Apply velocity
     // println!("vel: {:?} {:?}", self.vel.to_angle(), self.vel.magnitude());
