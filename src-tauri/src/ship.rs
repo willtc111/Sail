@@ -258,6 +258,7 @@ impl Ship for ForeAftRigShip {
     let water_vel = self.vel.scale(-1.0 * DELTA_TIME);
     if self.vel.magnitude() != 0.0 || self.rot_vel != 0.0 {
 
+      // Calculate keel forces
       let (fore_keel_length, aft_keel_length) =
         if KEEL_START_OFFSET <= 0.0 {
           (0.0, KEEL_LENGTH)
@@ -266,7 +267,6 @@ impl Ship for ForeAftRigShip {
           (KEEL_LENGTH - aft, aft)
         };
 
-      let mut debug_drag_new = Vec2D::zeros();
       if fore_keel_length > 0.0 {
         let fk_center = KEEL_START_OFFSET - fore_keel_length*0.5;
         let water_rot_vel = Vec2D::new(0.0, -self.rot_vel * DELTA_TIME * fk_center).rotate(self.heading);
@@ -277,7 +277,6 @@ impl Ship for ForeAftRigShip {
         let keel_loc = keel_offset.rotate(self.heading) + self.loc;
         forces.push(Force::new(String::from("Fore Keel Lift"), keel_loc, lift));
         forces.push(Force::new(String::from("Fore Keel Drag"), keel_loc, drag));
-        debug_drag_new = debug_drag_new + drag;
       }
 
       if aft_keel_length > 0.0 {
@@ -291,7 +290,6 @@ impl Ship for ForeAftRigShip {
         let keel_loc = keel_offset.rotate(self.heading) + self.loc;
         forces.push(Force::new(String::from("Aft Keel Lift"), keel_loc, lift));
         forces.push(Force::new(String::from("Aft Keel Drag"), keel_loc, drag));
-        debug_drag_new = debug_drag_new + drag;
       }
 
       // Calculate angle of attack on the rudder
