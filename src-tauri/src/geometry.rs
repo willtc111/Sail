@@ -100,7 +100,12 @@ impl std::ops::Div for Vec2D {
 
 
 pub fn bound_angle(angle: f64) -> f64 {
-  ((angle + PI).rem_euclid(2.0 * PI)) - PI
+  //((angle + PI).rem_euclid(2.0 * PI)) - PI
+  bound(angle, -PI, PI)
+}
+
+pub fn bound(value: f64, min: f64, max: f64) -> f64 {
+  ((value - min).rem_euclid(max - min)) + min
 }
 
 pub fn invert_angle(angle: f64) -> f64 {

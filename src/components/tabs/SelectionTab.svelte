@@ -51,7 +51,7 @@
     name={"Sail Angle"}
     bind:value={controls.sail_input}
     min={0}
-    max={9}
+    max={9.8}
     step={0.01}
     reset={0.0}
     {update}

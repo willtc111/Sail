@@ -18,14 +18,23 @@ impl Force {
 }
 
 
+pub fn calculate_aero_force_vecs(aoa: f64, area: f64, density: f64, velocity: Vec2D) -> (Vec2D, Vec2D) {
+  let lift_magnitude = calculate_lift(aoa, area, density, velocity.magnitude());
+  let drag_magnitude = calculate_drag(aoa, area, density, velocity.magnitude());
+  let lift = velocity.unit().rotate(PI/-2.0).scale(lift_magnitude);
+  let drag = velocity.unit().scale(drag_magnitude);
+  return (lift, drag);
+}
+
+
 pub fn calculate_lift(angle: f64, area: f64, density: f64, velocity: f64) -> f64 {
   let cl: f64 = calculate_lift_coefficient(angle);
-  calculate_force(cl, area, density, velocity)
+  return calculate_force(cl, area, density, velocity);
 }
 
 pub fn calculate_drag(angle: f64, area: f64, density: f64, velocity: f64) -> f64 {
   let cd: f64 = calculate_drag_coefficient(angle);
-  calculate_force(cd, area, density, velocity)
+  return calculate_force(cd, area, density, velocity);
 }
 
 pub fn calculate_force(coefficient: f64, area: f64, density: f64, velocity: f64) -> f64 {

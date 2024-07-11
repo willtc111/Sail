@@ -4,8 +4,8 @@ use serde::Serialize;
 
 use crate::{
   drawing::{Arrow, ForeAftRigShipShape, PhysicsShapes, SquareRigShipShape},
-  geometry::{bound_angle, invert_angle, Vec2D},
-  physics::{calculate_apparent_wind, calculate_drag, calculate_force, calculate_lift, Force},
+  geometry::{bound, bound_angle, invert_angle, Vec2D},
+  physics::{calculate_aero_force_vecs, calculate_apparent_wind, calculate_drag, calculate_force, calculate_lift, Force},
   simulation::DELTA_TIME
 };
 
@@ -13,29 +13,32 @@ use crate::{
 pub const HULL_WIDTH: f64 = 3.0;
 pub const HULL_LENGTH: f64 = 10.0;
 pub const HULL_DEPTH: f64 = 0.33;
-// pub const HULL_WETTED_AREA: f64 = HULL_WIDTH * HULL_LENGTH + 2.0 * HULL_DEPTH * (HULL_LENGTH + HULL_WIDTH);
-pub const SAIL_WIDTH: f64 = 7.0;
-pub const SAIL_WIDTH_SQUARED: f64 = SAIL_WIDTH * SAIL_WIDTH;
-pub const SAIL_HEIGHT: f64 = 10.0;
-pub const SAIL_AREA: f64 = SAIL_WIDTH * SAIL_HEIGHT / 2.0; // half because triangle
-pub const KEEL_LENGTH: f64 = 2.0;
-pub const KEEL_HEIGHT: f64 = 2.0;
-pub const KEEL_AREA: f64 = KEEL_LENGTH * KEEL_HEIGHT;
-pub const RUDDER_LENGTH: f64 = 1.0;
-pub const RUDDER_HEIGHT: f64 = 1.0;
-pub const RUDDER_AREA: f64 = RUDDER_LENGTH * RUDDER_HEIGHT;
-pub const MAST_OFFSET: f64 = 4.0;
 
 pub const HULL_DENSITY: f64 = 200.0; // kg / m^3, solid wood is ~600
 pub const HULL_MASS: f64 = HULL_WIDTH * HULL_LENGTH * HULL_DENSITY;
 pub const INVERSE_HULL_MASS: f64 = 1.0 / HULL_MASS;
 
+pub const MAST_OFFSET: f64 = 4.0;
+pub const SAIL_WIDTH: f64 = 7.0;
+pub const SAIL_WIDTH_SQUARED: f64 = SAIL_WIDTH * SAIL_WIDTH;
+pub const SAIL_HEIGHT: f64 = 10.0;
+pub const SAIL_AREA: f64 = SAIL_WIDTH * SAIL_HEIGHT / 2.0; // half because triangle
+
+pub const KEEL_START_OFFSET: f64 = 1.0;
+pub const KEEL_LENGTH: f64 = 2.0;
+pub const KEEL_HEIGHT: f64 = 2.0;
+pub const KEEL_AREA: f64 = KEEL_LENGTH * KEEL_HEIGHT;
+
+pub const RUDDER_LENGTH: f64 = 1.0;
+pub const RUDDER_HEIGHT: f64 = 1.0;
+pub const RUDDER_AREA: f64 = RUDDER_LENGTH * RUDDER_HEIGHT;
+
 pub const DENSITY_AIR: f64 = 1.225; // kg / m^3
 pub const DENSITY_WATER: f64 = 1027.0; // kg / m^3
-
 // found empirically? when water density is included in hull drag as the value that
 //  provides a maximum speed of about 1.5 * wind speed
 pub const FRICTION_COEFFICIENT: f64 = 0.007;
+
 
 pub trait Ship {
   fn sail(&mut self, wind_angle: f64, wind_speed: f64);
@@ -220,9 +223,6 @@ impl Ship for ForeAftRigShip {
         let loc_rot = offset.rotate(-offset.to_angle());
         let vec_rot = force.vec.rotate(-offset.to_angle());
         let torque = vec_rot.y * loc_rot.magnitude();
-        let direct_force_rot = Vec2D::new(vec_rot.x, 0.0);
-        let direct_force = direct_force_rot.rotate(offset.to_angle());
-        self.vel = self.vel + direct_force.scale(INVERSE_HULL_MASS);
         self.rot_vel = self.rot_vel + torque * INVERSE_HULL_MASS;
       }
     });
@@ -247,48 +247,59 @@ impl Ship for ForeAftRigShip {
 
       self.set_sail_angle(apparent_wind_angle);
 
-      let mut aoa = bound_angle(self.heading + self.sail_angle - apparent_wind_angle);
-      if aoa < 0.0 {
-        aoa = PI + aoa;
-      }
+      let aoa = bound(self.heading + self.sail_angle - apparent_wind_angle, 0.0, PI);
       // Calculate sail force vectors
-      let lift_magnitude = calculate_lift(aoa, SAIL_AREA, DENSITY_AIR, apparent_wind.magnitude());
-      let drag_magnitude = calculate_drag(aoa, SAIL_AREA, DENSITY_AIR, apparent_wind.magnitude());
-      let lift = apparent_wind.unit().rotate(PI/-2.0).scale(lift_magnitude);
-      let drag = apparent_wind.unit().scale(drag_magnitude);
-      let sail_center = self.loc + Vec2D::new(MAST_OFFSET, 0.0).rotate(self.heading) + Vec2D::new(-SAIL_WIDTH*0.25, 0.0).rotate(self.heading + self.sail_angle);
+      let (lift, drag) = calculate_aero_force_vecs(aoa, SAIL_AREA, DENSITY_AIR, apparent_wind);
+      let sail_center = self.loc + Vec2D::new(MAST_OFFSET, 0.0).rotate(self.heading) + Vec2D::new(-SAIL_WIDTH*0.33, 0.0).rotate(self.heading + self.sail_angle);
       forces.push(Force::new(String::from("Sail Lift"), sail_center, lift));
       forces.push(Force::new(String::from("Sail Drag"), sail_center, drag));
     }
 
     let water_vel = self.vel.scale(-1.0 * DELTA_TIME);
-    if self.vel.magnitude() != 0.0 {
-      // Calculate angle of attack on the keel/hull
-      let mut aoa: f64 = self.heading - water_vel.to_angle();
-      if aoa < 0.0 {
-        aoa = PI + aoa;
-      }
-      // Calculate keel force vectors
-      let lift_magnitude = calculate_lift(aoa, KEEL_AREA, DENSITY_WATER, water_vel.magnitude());
-      let drag_magnitude = calculate_drag(aoa, KEEL_AREA, DENSITY_WATER, water_vel.magnitude());
-      let lift = water_vel.unit().rotate(PI/-2.0).scale(lift_magnitude);
-      let drag = water_vel.unit().scale(drag_magnitude);
-      forces.push(Force::new(String::from("Keel Lift"), self.loc, lift));
-      forces.push(Force::new(String::from("Keel Drag"), self.loc, drag));
-    }
     if self.vel.magnitude() != 0.0 || self.rot_vel != 0.0 {
-      // Calculate angle of attack on the rudder
-      let rudder_water_rot_vel = Vec2D::new(0.0, self.rot_vel * DELTA_TIME * HULL_LENGTH * 0.5).rotate(self.heading);
-      let rudder_water_velocity = water_vel + rudder_water_rot_vel;
-      let mut aoa: f64 = self.heading + self.rudder_angle - rudder_water_velocity.to_angle() ;
-      if aoa < 0.0 {
-        aoa = PI + aoa;
+
+      let (fore_keel_length, aft_keel_length) =
+        if KEEL_START_OFFSET <= 0.0 {
+          (0.0, KEEL_LENGTH)
+        } else {
+          let aft = f64::max(0.0, KEEL_LENGTH - KEEL_START_OFFSET);
+          (KEEL_LENGTH - aft, aft)
+        };
+
+      let mut debug_drag_new = Vec2D::zeros();
+      if fore_keel_length > 0.0 {
+        let fk_center = KEEL_START_OFFSET - fore_keel_length*0.5;
+        let water_rot_vel = Vec2D::new(0.0, -self.rot_vel * DELTA_TIME * fk_center).rotate(self.heading);
+        let rel_water_vel = water_vel + water_rot_vel;
+        let aoa: f64 = bound(self.heading - rel_water_vel.to_angle(), 0.0, PI);
+        let (lift, drag) = calculate_aero_force_vecs(aoa, KEEL_HEIGHT*fore_keel_length, DENSITY_WATER, rel_water_vel);
+        let keel_offset = Vec2D::new(fk_center, 0.0);
+        let keel_loc = keel_offset.rotate(self.heading) + self.loc;
+        forces.push(Force::new(String::from("Fore Keel Lift"), keel_loc, lift));
+        forces.push(Force::new(String::from("Fore Keel Drag"), keel_loc, drag));
+        debug_drag_new = debug_drag_new + drag;
       }
+
+      if aft_keel_length > 0.0 {
+        let keel_end_offset = KEEL_START_OFFSET - KEEL_LENGTH;
+        let ak_center = keel_end_offset + aft_keel_length*0.5;
+        let water_rot_vel = Vec2D::new(0.0, -self.rot_vel * DELTA_TIME * ak_center).rotate(self.heading);
+        let rel_water_vel = water_vel + water_rot_vel;
+        let aoa: f64 = bound(self.heading - rel_water_vel.to_angle(), 0.0, PI);
+        let (lift, drag) = calculate_aero_force_vecs(aoa, KEEL_HEIGHT*aft_keel_length, DENSITY_WATER, rel_water_vel);
+        let keel_offset = Vec2D::new(ak_center, 0.0);
+        let keel_loc = keel_offset.rotate(self.heading) + self.loc;
+        forces.push(Force::new(String::from("Aft Keel Lift"), keel_loc, lift));
+        forces.push(Force::new(String::from("Aft Keel Drag"), keel_loc, drag));
+        debug_drag_new = debug_drag_new + drag;
+      }
+
+      // Calculate angle of attack on the rudder
+      let water_rot_vel = Vec2D::new(0.0, self.rot_vel * DELTA_TIME * HULL_LENGTH * 0.5).rotate(self.heading);
+      let rel_water_vel = water_vel + water_rot_vel;
+      let aoa: f64 = bound(self.heading + self.rudder_angle - rel_water_vel.to_angle(), 0.0, PI);
       // Calculate rudder force vectors
-      let lift_magnitude = calculate_lift(aoa, RUDDER_AREA, DENSITY_WATER, rudder_water_velocity.magnitude());
-      let drag_magnitude = calculate_drag(aoa, RUDDER_AREA, DENSITY_WATER, rudder_water_velocity.magnitude());
-      let lift = rudder_water_velocity.unit().rotate(PI/-2.0).scale(lift_magnitude);
-      let drag = rudder_water_velocity.unit().scale(drag_magnitude);
+      let (lift, drag) = calculate_aero_force_vecs(aoa, RUDDER_AREA, DENSITY_WATER, rel_water_vel);
       let rudder_offset = Vec2D::new(-HULL_LENGTH * 0.5, 0.0);
       let rudder_loc = rudder_offset.rotate(self.heading) + self.loc;
       forces.push(Force::new(String::from("Rudder Lift"), rudder_loc, lift));
@@ -297,10 +308,7 @@ impl Ship for ForeAftRigShip {
       // Calculate angle of attack on the front half of the hull
       let bow_water_rot_vel = Vec2D::new(0.0, -self.rot_vel * DELTA_TIME * HULL_LENGTH * 0.25).rotate(self.heading);
       let bow_water_vel = water_vel + bow_water_rot_vel;
-      let mut aoa: f64 = self.heading - bow_water_vel.to_angle();
-      if aoa < 0.0 {
-        aoa = PI + aoa;
-      }
+      let aoa: f64 = bound(self.heading - bow_water_vel.to_angle(), 0.0, PI);
       let apparent_width = f64::cos(aoa).abs() * HULL_WIDTH + f64::sin(aoa).abs() * HULL_LENGTH * 0.5;
       let wetted_area = HULL_DEPTH * apparent_width;
       let drag_magnitude = calculate_force(FRICTION_COEFFICIENT, wetted_area, DENSITY_WATER, bow_water_vel.magnitude());
@@ -311,10 +319,7 @@ impl Ship for ForeAftRigShip {
       // Calculate angle of attack on the rear half of the hull
       let stern_water_rot_vel = Vec2D::new(0.0, self.rot_vel * DELTA_TIME * HULL_LENGTH * 0.25).rotate(self.heading);
       let stern_water_vel = water_vel + stern_water_rot_vel;
-      let mut aoa: f64 = self.heading - stern_water_vel.to_angle();
-      if aoa < 0.0 {
-        aoa = PI + aoa;
-      }
+      let aoa: f64 = bound(self.heading - stern_water_vel.to_angle(), 0.0, PI);
       let apparent_width = f64::cos(aoa).abs() * HULL_WIDTH + f64::sin(aoa).abs() * HULL_LENGTH * 0.5;
       let wetted_area = HULL_DEPTH * apparent_width;
       let drag_magnitude = calculate_force(FRICTION_COEFFICIENT, wetted_area, DENSITY_WATER, stern_water_vel.magnitude());
@@ -366,7 +371,7 @@ pub fn debug_ship_physics(wind_angle: f64, wind_speed: f64, velocity: Vec2D, rot
   };
   
   // DEBUG SAILING
-  // ship.sail(wind_angle, wind_speed);
+  ship.sail(wind_angle, wind_speed);
 
   return shapes;
 }

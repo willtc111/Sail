@@ -47,9 +47,9 @@
   };
   let forceToggles = {
     sail: false,
-    keel: false,
-    hull: true,
-    rudder: false,
+    keel: true,
+    hull: false,
+    rudder: true,
   };
 
   async function loadFromSelection() {
@@ -101,20 +101,20 @@
         forces.push(forceToArrow(shapes.forces[5], colors.sail_drag)); // sail drag
       }
     }
-    if (parameters.velocity.magnitude() != 0) {
+    if (parameters.velocity.magnitude() != 0 || parameters.rot_velocity != 0) {
       if (forceToggles.keel) {
         forces.push(forceToArrow(shapes.forces[6], colors.keel_lift, 0.5)); // keel lift
         forces.push(forceToArrow(shapes.forces[7], colors.keel_drag, 0.5)); // keel drag
+        forces.push(forceToArrow(shapes.forces[8], colors.keel_lift, 0.5)); // keel lift
+        forces.push(forceToArrow(shapes.forces[9], colors.keel_drag, 0.5)); // keel drag
       }
-    }
-    if (parameters.velocity.magnitude() != 0 || parameters.rot_velocity != 0) {
       if (forceToggles.rudder) {
-        forces.push(forceToArrow(shapes.forces[8], colors.rudder_lift, 0.125)); // rudder lift
-        forces.push(forceToArrow(shapes.forces[9], colors.rudder_drag, 0.125)); // rudder drag
+        forces.push(forceToArrow(shapes.forces[10], colors.rudder_lift, 0.125)); // rudder lift
+        forces.push(forceToArrow(shapes.forces[11], colors.rudder_drag, 0.125)); // rudder drag
       }
       if (forceToggles.hull) {
-        forces.push(forceToArrow(shapes.forces[10], colors.hull_drag, 0.5)); // hull front drag
-        forces.push(forceToArrow(shapes.forces[11], colors.hull_drag, 0.5)); // hull rear drag
+        forces.push(forceToArrow(shapes.forces[12], colors.hull_drag, 0.5)); // hull front drag
+        forces.push(forceToArrow(shapes.forces[13], colors.hull_drag, 0.5)); // hull rear drag
       }
     }
 
