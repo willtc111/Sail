@@ -12,6 +12,8 @@ impl Vec2D {
   pub fn new(x:f64, y:f64) -> Self {
     Self{x,y}
   }
+
+  /// The origin
   pub fn zeros() -> Self {
     Self::new(0.0,0.0)
   }
@@ -29,8 +31,7 @@ impl Vec2D {
     f64::atan2(self.y, self.x)
   }
 
-  /// The angle between the two points relative to the x axis.
-  /// Result is in radians
+  /// The angle in radians between the two points relative to the x axis.
   pub fn angle_between(self, other: Self) -> f64 {
     let diff = self - other;
     diff.to_angle()
@@ -98,20 +99,28 @@ impl std::ops::Div for Vec2D {
   }
 }
 
-
+/// Bound an angle to the range of [-PI, PI), wrapping overflow.
 pub fn bound_angle(angle: f64) -> f64 {
-  //((angle + PI).rem_euclid(2.0 * PI)) - PI
   bound(angle, -PI, PI)
 }
 
+/// Bound a value to the range specified by min and max, wrapping overflow.
 pub fn bound(value: f64, min: f64, max: f64) -> f64 {
   ((value - min).rem_euclid(max - min)) + min
 }
 
+/// Rotate an angle by 180 degrees, keeping it within the range of [-PI, PI)
 pub fn invert_angle(angle: f64) -> f64 {
   bound_angle(angle + PI)
 }
 
+/// For triangle with edges ABC, use the law of cosines to find the angle between edges A and B.
+/// Arguments are the edge lengths.
+pub fn find_angle(a: f64, b: f64, c: f64) -> f64 {
+  let top = a*a + b*b - c*c;
+  let bottom = 2.0 * a * b;
+  return f64::acos(top / bottom);
+}
 
 #[cfg(test)]
 mod tests {
