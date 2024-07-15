@@ -1,10 +1,11 @@
 <script lang="ts">
   import RangeInput from "$components/RangeInput.svelte";
   import { invoke } from "@tauri-apps/api";
-  import { onDestroy, onMount } from "svelte";
+  import { onMount } from "svelte";
   import PrecisionRangeInput from "$components/PrecisionRangeInput.svelte";
   import { selection } from "$lib/stores/selection";
   import type { ShipData } from "$lib/types";
+    import { simulationStep } from "$lib/stores/step";
 
   let ship_id: number|null = null;
   let controls = {
@@ -34,14 +35,13 @@
       rudder_angle: controls.rudder_input
     };
     await invoke('set_ship_controls', inputs);
-    getValues();
   }
 
-  const unsubscribe = selection.subscribe((value: number|null) => {
-    ship_id = value;
+  $: subscription($selection, $simulationStep);
+  function subscription(selection: number|null, step: number) {
+    ship_id = selection;
     getValues();
-  });
-  onDestroy(unsubscribe);
+  }
 
 </script>
 
@@ -64,10 +64,7 @@
     step={0.01}
     {update}
   />
-  <table
-    class="w-full mt-2 border border-surface-700-200-token"
-    on:mousemove={getValues}
-  >
+  <table class="w-full mt-2 border border-surface-700-200-token">
     <tbody>
       <tr>
         <td class="font-bold">Location</td>

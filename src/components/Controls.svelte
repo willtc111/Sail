@@ -3,13 +3,26 @@
   import { RollingAverage } from "$lib/performance";
   import { XY } from "$lib/point";
   import { canvasInterface, canvasSettings, drawBuffer } from "$lib/stores/canvasInterface";
+    import { controlsInterface } from "$lib/stores/controls";
   import { selection } from "$lib/stores/selection";
+    import { simulationStep } from "$lib/stores/step";
   import { invoke } from "@tauri-apps/api";
 
   export let dishWidth: number;
   export let dishHeight: number;
 
+  export let stepDelayMs: number = 1000/60; // 60 fps
+
   let {draw, centerOn} = $canvasInterface;
+  controlsInterface.set({
+    home: home,
+    step: stepUpdate,
+    play: play,
+    pause: pause,
+    fastforward: fastforward,
+    toggleTracking: toggleTracking,
+    redraw: stepDraw,
+  });
 
   let loopTimeoutId: NodeJS.Timeout | undefined;
   function pause() {
@@ -34,18 +47,17 @@
     stepCount = await invoke('step_simulation') as number;
     stepCount = await invoke('step_simulation') as number;
     stepCount = await invoke('step_simulation') as number;
+    $simulationStep = stepCount;
     await stepDraw();
     let curTime = Date.now();
     let elapsed = curTime - lastTime;
     lastTime = curTime;
-    // console.log(`elapsed: ${elapsed}`);
     mspf.add(elapsed);
     average = mspf.get() ?? "---";
   }
 
   stepDraw();
 
-  let trackLocation: XY|undefined = undefined;
   async function stepDraw() {
     let halfWidth = dishWidth / 2;
     let halfHeight = dishHeight / 2;
@@ -79,7 +91,7 @@
     stepUpdate();
     loopTimeoutId = setTimeout(
       () => loopStep(),
-      fastforwarding ? 0 : 1000/60
+      fastforwarding ? 0 : stepDelayMs
     );
   }
 

@@ -5,6 +5,7 @@
   import RangeInput from "../../RangeInput.svelte";
   import { selection } from "$lib/stores/selection";
   import type { ShipData } from "$lib/types";
+  import { simulationStep } from "$lib/stores/step";
 
   // Canvas dimensions
   let width = 300;
@@ -14,11 +15,15 @@
   let ctx: CanvasRenderingContext2D | null;
   $: if (canvas) {
     ctx = canvas.getContext('2d', { alpha: false });
-    update();
+    if ($simulationStep && syncSelection && $selection != null) {
+      loadFromSelection();
+    } else {
+      update();
+    }
   }
 
-  // let sail_max = 3.14;
-  let sail_max = Math.sqrt(7*7+7*7);
+  // let sail_max = 3.14; // square rig
+  let sail_max = Math.sqrt(7*7+7*7); // fore-aft rig
 
   let temp_parameters = {
     move_angle: 0.0,
@@ -46,11 +51,18 @@
     rudder_drag: '#ff00ff',
   };
   let forceToggles = {
-    sail: false,
+    sail: true,
     keel: true,
-    hull: false,
+    hull: true,
     rudder: true,
   };
+
+  let syncSelection = $selection != null;
+  $: syncSelection = syncSelection && $selection != null;
+
+  $: if ($simulationStep && syncSelection && $selection != null) {
+    loadFromSelection();
+  }
 
   async function loadFromSelection() {
     let ship = await invoke('get_ship', {index: $selection}) as ShipData;
@@ -59,7 +71,7 @@
     temp_parameters.move_speed = parameters.velocity.magnitude();
     parameters.rot_velocity = ship.rot_vel;
     parameters.heading = ship.heading;
-    parameters.sail = ship.sail_angle;
+    parameters.sail = ship.mainsheet_length;
     parameters.rudder_angle = ship.rudder_angle;
     let settings = await invoke('get_sim_settings') as { wind_angle: number, wind_speed: number };
     parameters.wind_angle = settings.wind_angle;
@@ -69,7 +81,6 @@
 
   async function update() {
     if (ctx == null) { return; }
-    console.log("updating physics demo");
 
     parameters.velocity.x = Math.cos(temp_parameters.move_angle) * temp_parameters.move_speed;
     parameters.velocity.y = Math.sin(temp_parameters.move_angle) * temp_parameters.move_speed;
@@ -87,6 +98,7 @@
       'white'
     );
     let forces: Arrow[] = [];
+
     function forceToArrow(f: any, color: string, bonusWidth: number = 0.0): Arrow {
       return new Arrow(f.start, f.end, f.width + bonusWidth, f.head_size, color);
     }
@@ -161,13 +173,15 @@
       </label>
     </div>
     <div class="">
-      <button
-        disabled={$selection == null}
-        on:click={loadFromSelection}
-        class="btn variant-filled-primary"
-      >
-        Load Selection
-      </button>
+      <label class="flex flex-row gap-1">
+        <span class="font-bold">Sync</span>
+        <div class="w-4">
+          {#if $selection == null}
+            <i class="fa fa-info-circle" title="Select a ship to toggle syncing"/>
+          {/if}
+          <input type="checkbox" bind:checked={syncSelection} hidden={$selection == null}/>
+        </div>
+      </label>
     </div>
   </div>
   <div class="py-1">
@@ -178,6 +192,7 @@
       min={-3.14}
       max={3.14}
       step={0.01}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -188,14 +203,16 @@
       max={10.0}
       step={0.01}
       reset={1.0}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
       name={"Sail Input"}
       bind:value={parameters.sail}
-      min={-sail_max}
+      min={0.0}
       max={sail_max}
       step={0.01}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -204,6 +221,7 @@
       min={-3.14/2}
       max={3.14/2}
       step={0.01}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -212,6 +230,7 @@
       min={-3.14}
       max={3.14}
       step={0.01}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -222,6 +241,7 @@
       max={3.14}
       step={0.01}
       reset={0.0}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -232,6 +252,7 @@
       max={10}
       step={0.01}
       reset={0.0}
+      disabled={syncSelection}
       {update}
     />
     <RangeInput
@@ -242,6 +263,7 @@
       max={5}
       step={0.01}
       reset={0.0}
+      disabled={syncSelection}
       {update}
     />
   </div>

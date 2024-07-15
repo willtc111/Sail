@@ -6,7 +6,7 @@
   export let max: number;
   export let step: number;
   export let reset: number = (max - min) / 2.0 + min;
-  export let update: () => {};
+  export let update: () => any = () => {};
 
   let slideMin = Math.sign(min) * Math.sqrt(Math.abs(min));
   let slideMax = Math.sign(max) * Math.sqrt(Math.abs(max));

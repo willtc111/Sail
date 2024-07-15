@@ -6,7 +6,8 @@
   export let max: number;
   export let step: number;
   export let reset: number = (max - min) / 2.0 + min;
-  export let update: () => {};
+  export let update: () => any = () => {};
+  export let disabled: boolean = false;
 
   function resetValue() {
     value = reset;
@@ -22,6 +23,7 @@
   <button
     on:click={resetValue}
     class="basis-1/6 px-2 text-right"
+    disabled={disabled}
   >
     <i class="fa-solid fa-refresh"/>
   </button>
@@ -34,6 +36,7 @@
     on:input={update}
     type="number"
     class="basis-3/6 input text-right border-l-2 border-l-black"
+    disabled={disabled}
   >
   <input
     {name}
@@ -45,5 +48,6 @@
     type="range"
     class="basis-full py-0.5"
     style="accent-color: {color};"
+    disabled={disabled}
   />
 </div>

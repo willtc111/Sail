@@ -228,7 +228,7 @@ impl Ship for ForeAftRigShip {
     });
 
     self.loc = self.loc + self.vel.scale(DELTA_TIME);
-    self.heading = self.heading + self.rot_vel * DELTA_TIME;
+    self.heading = bound_angle(self.heading + self.rot_vel * DELTA_TIME);
   }
 
   fn forces(&mut self, wind_angle: f64, wind_speed: f64) -> Vec<Force> {

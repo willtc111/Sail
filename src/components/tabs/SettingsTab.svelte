@@ -14,7 +14,6 @@
 
   async function reset() {
     parameters = await invoke('get_sim_settings');
-    console.log(parameters);
   }
 
   async function update() {

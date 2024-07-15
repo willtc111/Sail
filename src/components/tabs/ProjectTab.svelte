@@ -1,16 +1,21 @@
 <script lang="ts">
+  import { controlsInterface } from "$lib/stores/controls";
   import { invoke } from "@tauri-apps/api";
 
 
   async function startNew() {
     console.log("Starting new project");
+    $controlsInterface.pause();
     await invoke('reset_simulation');
+    $controlsInterface.redraw();
   }
   async function load() {
     console.log("Loading project");
+    $controlsInterface.pause();
   }
   async function save() {
     console.log("Saving project");
+    $controlsInterface.pause();
   }
 
 </script>
