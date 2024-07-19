@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::geometry::Vec2D;
-use crate::drawing::{ForeAftRigShipShape, SquareRigShipShape};
-use crate::ship::{ForeAftRigShip, Ship, SquareRigShip, HULL_LENGTH};
+use crate::drawing::{ForeAftRigShipShape};
+use crate::ship::{ForeAftRigShip, Ship, HULL_LENGTH};
 
 pub const DELTA_TIME: f64 = 1.0 / 30.0; // seconds
 
