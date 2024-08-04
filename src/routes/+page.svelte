@@ -43,7 +43,7 @@
   <!-- Info/Controls -->
   <div class="h-full w-96 flex flex-col gap-2">
     <section class="card flex justify-between p-1">
-      <h1 class="font-mono font-bold tracking-widest">Petri</h1>
+      <h1 class="font-mono font-bold tracking-widest">Sail</h1>
       <LightSwitch />
     </section>
     <section class="card">

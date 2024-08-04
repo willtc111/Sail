@@ -7,7 +7,7 @@
     "distDir": "../build"
   },
   "package": {
-    "productName": "Petri",
+    "productName": "sail",
     "version": "0.1.0"
   },
   "tauri": {
@@ -59,7 +59,7 @@
         "height": 900,
         "width": 800,
         "resizable": true,
-        "title": "Petri"
+        "title": "Sail"
       }
     ]
   }

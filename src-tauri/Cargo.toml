@@ -1,11 +1,11 @@
 [package]
-name = "petri"
+name = "sail"
 version = "0.1.0"
-description = "A digital petri dish"
+description = "Sailing simulator"
 authors = ["Will"]
 license = ""
 repository = ""
-default-run = "petri"
+default-run = "sail"
 edition = "2021"
 rust-version = "1.60"
 
