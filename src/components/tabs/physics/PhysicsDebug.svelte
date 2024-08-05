@@ -35,7 +35,7 @@
     velocity: new XY(0.0, 0.0),
     rot_velocity: 0.0,
     heading: 0.0,
-    sail: 0.0,
+    sails: [0.0],
     rudder_angle: 0.0
   };
   let colors = {
@@ -71,7 +71,7 @@
     temp_parameters.move_speed = parameters.velocity.magnitude();
     parameters.rot_velocity = ship.rot_vel;
     parameters.heading = ship.heading;
-    parameters.sail = ship.mainsheet_length;
+    parameters.sails = ship.mainsheet_lengths;
     parameters.rudder_angle = ship.rudder_angle;
     let settings = await invoke('get_sim_settings') as { wind_angle: number, wind_speed: number };
     parameters.wind_angle = settings.wind_angle;
@@ -92,10 +92,9 @@
     let ship = new Ship(
       shapes.ship.center,
       shapes.ship.hull,
-      shapes.ship.sail,
+      shapes.ship.sails,
       shapes.ship.rudder,
-      'brown',
-      'white'
+      'brown', 'white'
     );
     let forces: Arrow[] = [];
 
@@ -208,7 +207,7 @@
     />
     <RangeInput
       name={"Sail Input"}
-      bind:value={parameters.sail}
+      bind:value={parameters.sails[0]}
       min={0.0}
       max={sail_max}
       step={0.01}

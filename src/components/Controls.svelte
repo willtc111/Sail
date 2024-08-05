@@ -77,9 +77,9 @@
     let ships = await invoke('get_population') as any[];
     ships = ships.map(s => new Ship(
       XY.from(s.center),
-      s.hull.map((xy: { x: number; y: number; }) => XY.from(xy)),
-      s.sail.map((xy: { x: number; y: number; }) => XY.from(xy)),
-      s.rudder.map((xy: { x: number; y: number; }) => XY.from(xy)),
+      s.hull,
+      s.sails,
+      s.rudder,
       'brown', 'white'));
     ships.forEach(d => drawBuffer.add(d));
 

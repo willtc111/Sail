@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use crate::{
-  geometry::Vec2D, physics::Force, ship::{AdjustableShip, ForeAftRigShip, HULL_LENGTH, HULL_WIDTH, MAST_OFFSET, RUDDER_LENGTH, SAIL_WIDTH}
+  geometry::Vec2D, physics::Force, ship::{AdjustableShip, HULL_LENGTH, HULL_WIDTH, MAST_OFFSET, RUDDER_LENGTH, SAIL_WIDTH}
 };
 
 // Ship drawing constants
@@ -48,66 +48,6 @@ impl AdjustableShipShape {
   }
 }
 
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ForeAftRigShipShape {
-  center: Vec2D,
-  hull: Vec<Vec2D>,
-  sail: Vec<Vec2D>,
-  rudder: Vec<Vec2D>,
-}
-impl ForeAftRigShipShape {
-  pub fn default(scale: f64) -> Self {
-    let center = Vec2D::new(0.0,0.0);
-
-    let mut hull = Vec::new();
-    hull.push(Vec2D::new(-HALF_HULL_LENGTH * scale, HALF_HULL_WIDTH * scale));
-    hull.push(Vec2D::new(HALF_HULL_LENGTH * scale, HALF_HULL_WIDTH * scale));
-    hull.push(Vec2D::new(HALF_HULL_LENGTH * scale, -HALF_HULL_WIDTH * scale));
-    hull.push(Vec2D::new(-HALF_HULL_LENGTH * scale, -HALF_HULL_WIDTH * scale));
-
-    let mut sail = Vec::new();
-    sail.push(Vec2D::new(0.0, 0.0));
-    sail.push(Vec2D::new(-SAIL_WIDTH * scale, 0.0));
-
-    let mut rudder = Vec::new();
-    rudder.push(Vec2D::new(0.0, 0.0));
-    rudder.push(Vec2D::new(-RUDDER_LENGTH * scale, 0.0));
-
-    Self {
-      center,
-      hull,
-      sail,
-      rudder,
-    }
-  }
-
-  pub fn new(ship: &ForeAftRigShip, default_ship: &Self) -> Self {
-    let hull = default_ship.hull.iter()
-      .map(|p|
-        p.rotate(ship.heading) + ship.loc
-      ).collect();
-
-    let mast_offset = Vec2D::new(MAST_OFFSET, 0.0);
-    let sail = default_ship.sail.iter()
-      .map(|p|
-        (p.rotate(ship.sail_angle) + mast_offset).rotate(ship.heading) + ship.loc
-      ).collect();
-
-    let rudder_offset = Vec2D::new(-HALF_HULL_LENGTH, 0.0);
-    let rudder = default_ship.rudder.iter()
-      .map(|p|
-        (p.rotate(ship.rudder_angle) + rudder_offset).rotate(ship.heading) + ship.loc
-      ).collect();
-
-    Self {
-      center: ship.loc,
-      hull,
-      sail,
-      rudder
-    }
-  }
-}
 
 impl Vec2D {
   pub fn transform(self, angle: f64, location: Self) -> Self {
@@ -168,6 +108,6 @@ impl Arrow {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PhysicsShapes {
-  pub ship: ForeAftRigShipShape,
+  pub ship: AdjustableShipShape,
   pub forces: Vec<Arrow>
 }

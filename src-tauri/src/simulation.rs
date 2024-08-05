@@ -1,12 +1,12 @@
 use std::{f64::consts::PI, sync::Mutex};
 
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tauri::State;
 
 use crate::geometry::Vec2D;
-use crate::drawing::{ForeAftRigShipShape};
-use crate::ship::{ForeAftRigShip, Ship, HULL_LENGTH};
+use crate::drawing::AdjustableShipShape;
+use crate::ship::{AdjustableShip, Ship, ShipSpecs, HULL_LENGTH};
 
 pub const DELTA_TIME: f64 = 1.0 / 30.0; // seconds
 
@@ -23,7 +23,7 @@ impl SimSettings {
 
 pub struct Simulation {
   step: u64,
-  population: Vec<ForeAftRigShip>,
+  population: Vec<AdjustableShip>,
   settings: SimSettings,
   random: StdRng,
 }
@@ -36,27 +36,34 @@ impl Simulation {
       random: StdRng::seed_from_u64(seed)
     }
   }
-  fn debug_ships() -> Vec<ForeAftRigShip> {
+  fn debug_ships() -> Vec<AdjustableShip> {
     let mut ships = Vec::new();
-    ships.push(ForeAftRigShip::new(
+    ships.push(AdjustableShip::new(
+      ShipSpecs::default(),
       Vec2D::new(50.0, 25.0),
       Vec2D::new(0.0, 0.0),
       0.0,
       PI,
-      0.0,
+      vec![0.0],
       0.0
     ));
-    ships.push(ForeAftRigShip::new(
+    ships.push(AdjustableShip::new(
+      ShipSpecs::default(),
       Vec2D::new(50.0, 50.0),
       Vec2D::new(0.0, 0.0),
       0.0,
-      PI, 0.0, 0.0
+      PI,
+      vec![0.0],
+      0.0
     ));
-    ships.push(ForeAftRigShip::new(
+    ships.push(AdjustableShip::new(
+      ShipSpecs::default(),
       Vec2D::new(50.0, 75.0),
       Vec2D::new(0.0, 0.0),
       0.0,
-      PI, 0.0, 0.0
+      PI,
+      vec![0.0],
+      0.0
     ));
     return ships;
   }
@@ -67,19 +74,19 @@ impl Simulation {
       ship.update(self.settings.wind_angle, self.settings.wind_speed)
     );
   }
-  pub fn get_population(&self) -> &Vec<ForeAftRigShip> {
+  pub fn get_population(&self) -> &Vec<AdjustableShip> {
     return &self.population;
   }
-  pub fn set_population(&mut self, population: Vec<ForeAftRigShip>) {
+  pub fn set_population(&mut self, population: Vec<AdjustableShip>) {
     self.population = population;
   }
-  pub fn get_ship(&self, index: usize) -> Option<&ForeAftRigShip> {
+  pub fn get_ship(&self, index: usize) -> Option<&AdjustableShip> {
     self.population.get(index)
   }
-  pub fn update_ship_controls(&mut self, index: usize, sail: f64, rudder: f64) {
+  pub fn update_ship_controls(&mut self, index: usize, sails: Vec<f64>, rudder: f64) {
     match self.population.get_mut(index) {
       Some(ship) => {
-        ship.mainsheet_length = sail;
+        ship.mainsheet_lengths = sails;
         ship.rudder_angle = rudder;
       }
       None => {}
@@ -123,27 +130,26 @@ pub fn set_sim_settings(sim: State<Mutex<Simulation>>, wind_angle: f64, wind_spe
 }
 
 #[tauri::command]
-pub fn get_population(sim: State<Mutex<Simulation>>) -> Vec<ForeAftRigShipShape> {
+pub fn get_population(sim: State<Mutex<Simulation>>) -> Vec<AdjustableShipShape> {
   let sim = sim.lock().unwrap();
 
-  let default_ship = ForeAftRigShipShape::default(1.0);
-  let mut ships: Vec<ForeAftRigShipShape> = Vec::new();
-  sim.get_population().iter().for_each(|ship| ships.push(ForeAftRigShipShape::new(ship, &default_ship)));
+  let mut ships: Vec<AdjustableShipShape> = Vec::new();
+  sim.get_population().iter().for_each(|ship| ships.push(AdjustableShipShape::new(ship)));
   return ships;
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn get_ship(sim: State<Mutex<Simulation>>, index: usize) -> ForeAftRigShip {
+pub fn get_ship(sim: State<Mutex<Simulation>>, index: usize) -> AdjustableShip {
   let sim = sim.lock().unwrap();
-  let ship = sim.get_ship(index);
-  return *ship.unwrap();
+  let ship = sim.get_ship(index).unwrap();
+  return ship.clone();
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub fn get_ship_id(sim: State<Mutex<Simulation>>, loc: Vec2D) -> Option<usize> {
   let sim = sim.lock().unwrap();
   for i in 0..sim.get_population().len() {
-    let ship = sim.get_population()[i];
+    let ship = &sim.get_population()[i];
     if ship.loc.dist(loc) < HULL_LENGTH / 2.0 {
       return Some(i);
     }
@@ -152,7 +158,7 @@ pub fn get_ship_id(sim: State<Mutex<Simulation>>, loc: Vec2D) -> Option<usize> {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn set_ship_controls(sim: State<Mutex<Simulation>>, index: usize, mainsheet_length: f64, rudder_angle: f64) {
+pub fn set_ship_controls(sim: State<Mutex<Simulation>>, index: usize, mainsheet_lengths: Vec<f64>, rudder_angle: f64) {
   let mut sim = sim.lock().unwrap();
-  sim.update_ship_controls(index, mainsheet_length, rudder_angle);
+  sim.update_ship_controls(index, mainsheet_lengths, rudder_angle);
 }

@@ -293,24 +293,26 @@ export function shapeToGraph(shape: Shape): Graph {
 
   return new Graph(points, lines);
 }
-
+type PrePolygon = {
+  points: XY[]
+};
 export class Ship implements Drawable {
   center: XY;
   hull: Polygon;
-  sail: Line;
-  rudder: Line;
+  sails: Polygon[];
+  rudder: Polygon;
 
-  constructor(center: XY, hull: XY[], sail: XY[], rudder: XY[], hull_color: string = 'brown', sail_color: string = 'white') {
+  constructor(center: XY, hull: PrePolygon, sails: PrePolygon[], rudder: PrePolygon, hull_color: string = 'brown', sail_color: string = 'white') {
     this.center = center;
-    this.hull = new Polygon(hull, hull_color);
-    this.sail = new Line(sail[0], sail[1], 1, sail_color);
-    this.rudder = new Line(rudder[0], rudder[1], 0.5, hull_color);
+    this.hull = new Polygon(hull.points, hull_color);
+    this.sails = sails.map(s => new Polygon(s.points, sail_color));
+    this.rudder = new Polygon(rudder.points, hull_color);
   }
 
   draw(ctx: CanvasRenderingContext2D) {
     // Draw from the bottom up
     this.rudder.draw(ctx);
     this.hull.draw(ctx);
-    this.sail.draw(ctx);
+    this.sails.forEach(s => s.draw(ctx));
   }
 }

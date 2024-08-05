@@ -9,7 +9,7 @@
 
   let ship_id: number|null = null;
   let controls = {
-    sail_input: 0.0,
+    sail_inputs: [0.0],
     rudder_input: 0.0,
   };
   let ship: ShipData | null;
@@ -21,7 +21,7 @@
   async function getValues() {
     if (ship_id != null) {
       ship = await invoke('get_ship', {index: ship_id}) as ShipData;
-      controls.sail_input = ship.mainsheet_length;
+      controls.sail_inputs = ship.mainsheet_lengths;
       controls.rudder_input = ship.rudder_angle;
     } else {
       ship = null;
@@ -31,7 +31,7 @@
   async function update() {
     let inputs =  {
       index: ship_id,
-      mainsheet_length: controls.sail_input,
+      mainsheet_lengths: controls.sail_inputs,
       rudder_angle: controls.rudder_input
     };
     await invoke('set_ship_controls', inputs);
@@ -49,7 +49,7 @@
 {#if ship != undefined}
   <RangeInput
     name={"Sail Angle"}
-    bind:value={controls.sail_input}
+    bind:value={controls.sail_inputs[0]}
     min={0}
     max={9.8}
     step={0.01}

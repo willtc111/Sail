@@ -13,6 +13,6 @@ export type ShipData = {
   rot_vel: number,
   heading: number,
   sail_angle: number,
-  mainsheet_length: number,
+  mainsheet_lengths: number[],
   rudder_angle: number,
 }
