@@ -13,6 +13,14 @@ impl Vec2D {
     Self{x,y}
   }
 
+  pub fn at_x(x: f64) -> Self {
+    Self::new(x, 0.0)
+  }
+
+  pub fn at_y(y: f64) -> Self {
+    Self::new(0.0, y)
+  }
+
   /// The origin
   pub fn zeros() -> Self {
     Self::new(0.0,0.0)

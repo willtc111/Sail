@@ -63,10 +63,17 @@ pub fn calculate_drag_coefficient(angle: f64) -> f64 {
   return cd;
 }
 
-pub fn calculate_apparent_wind(velocity: Vec2D, wind_angle: f64, wind_speed: f64) -> Vec2D {
+pub fn calculate_apparent_wind_simple(velocity: Vec2D, wind_angle: f64, wind_speed: f64) -> Vec2D {
+  return calculate_apparent_wind(velocity, 0.0, 0.0, 0.0, wind_angle, wind_speed);
+}
+
+pub fn calculate_apparent_wind(velocity: Vec2D, rotational_velocity: f64, heading: f64, offset: f64, wind_angle: f64, wind_speed: f64) -> Vec2D {
   let wind = Vec2D::from_angle(invert_angle(wind_angle)).scale(wind_speed);
-  // Subtract velocity because moving creates apparent wind in the opposite direction
-  return wind - velocity; 
+  // Assumes the rotational velocity across the whole sail is the same as it is at the mast, which is incorrect but simpler to implement
+  let velocity_via_rotation = Vec2D::new(0.0, rotational_velocity * offset).rotate(heading);
+  let total_velocity = velocity + velocity_via_rotation;
+  // Subtract total velocity because movement creates apparent wind in the opposite direction
+  return wind - total_velocity;
 }
 
 #[tauri::command]

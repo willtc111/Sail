@@ -64,7 +64,7 @@ impl Simulation {
     self.step += 1;
 
     self.population.iter_mut().for_each(| ship |
-      ship.sail(self.settings.wind_angle, self.settings.wind_speed)
+      ship.update(self.settings.wind_angle, self.settings.wind_speed)
     );
   }
   pub fn get_population(&self) -> &Vec<ForeAftRigShip> {
