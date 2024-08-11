@@ -9,31 +9,9 @@ use crate::{
   simulation::DELTA_TIME
 };
 
-
-pub const HULL_WIDTH: f64 = 3.0;
-pub const HULL_LENGTH: f64 = 10.0;
-pub const HULL_DEPTH: f64 = 0.33;
-
-pub const HULL_THICKNESS: f64 = 0.05; // 5 cm thick
-pub const HULL_VOLUME: f64 = HULL_THICKNESS * (HULL_WIDTH * HULL_LENGTH + 2.0 * HULL_WIDTH * HULL_DEPTH + 2.0 * HULL_LENGTH * HULL_DEPTH);
-pub const HULL_MASS: f64 = HULL_VOLUME * DENSITY_WOOD;
-pub const INVERSE_HULL_MASS: f64 = 1.0 / HULL_MASS;
 // Determined empirically so that the maximum speed is roughly 2x wind speed
 pub const HULL_FRICTION_COEFFICIENT: f64 = 0.007;
-
-pub const MAST_OFFSET: f64 = 4.0;
-pub const SAIL_WIDTH: f64 = 7.0;
-pub const SAIL_HEIGHT: f64 = 10.0;
-pub const SAIL_AREA: f64 = SAIL_WIDTH * SAIL_HEIGHT / 2.0; // half because triangle
 pub const SAIL_AERO_CENTER: f64 = 0.33; // Arbitrarily picked 1/3 of the width from the mast
-
-pub const KEEL_START_OFFSET: f64 = 1.0;
-pub const KEEL_LENGTH: f64 = 2.0;
-pub const KEEL_HEIGHT: f64 = 2.0;
-
-pub const RUDDER_LENGTH: f64 = 1.0;
-pub const RUDDER_HEIGHT: f64 = 1.0;
-pub const RUDDER_AREA: f64 = RUDDER_LENGTH * RUDDER_HEIGHT;
 
 pub const DENSITY_AIR: f64 = 1.225; // kg / m^3
 pub const DENSITY_WATER: f64 = 1027.0; // kg / m^3
@@ -124,7 +102,35 @@ impl ShipSpecs {
       sail_start_limit = sail_end;
     }
 
+    // Ship can float (hull displaces water weighing more than the ship weighs)
+    if self.calculate_deadweight_tonnage() < 0.0 {
+      return Result::Err(format!("Ship is not buoyant"));
+    }
+
     return Result::Ok(());
+  }
+
+  /// The mass of the ship
+  pub fn calculate_mass(&self) -> f64 {
+    let mass_hull = DENSITY_WOOD * self.hull_thickness * (
+      self.hull_length * self.hull_width // Bottom
+      + 2.0 * self.hull_width * self.hull_depth // Two Sides
+      + 2.0 * self.hull_length * self.hull_depth // Front & Back
+    );
+    let mass_sails: f64 = self.sails.iter().map(|sail| {
+      let sail_mass = DENSITY_SAIL * sail.width * sail.height * 0.5; // Half because triangle
+      let sail_thickness = 0.01 * sail.width * sail.height; // Guessing a mast needs to be about 1 cm thick for every square meter of sail
+      let mast_mass = DENSITY_WOOD * sail.height * sail_thickness * sail_thickness;
+      return sail_mass + mast_mass;
+    }).sum();
+    return mass_hull + mass_sails;
+  }
+
+  /// The weight that the ship can carry without sinking (ship is not buoyant if less than 0)
+  pub fn calculate_deadweight_tonnage(&self) -> f64 {
+    let hull_volume = self.hull_depth * self.hull_length * self.hull_width;
+    let water_mass = DENSITY_WATER * hull_volume;
+    return water_mass - self.calculate_mass();
   }
 }
 
@@ -151,7 +157,7 @@ impl AdjustableShip {
   }
 
   /// Calculate the angle the sail should be based on the apparent wind angle
-  fn set_sail_angle(&mut self, sail_index: usize, apparent_wind_angle: f64) -> f64{
+  fn set_sail_angle(&mut self, sail_index: usize, apparent_wind_angle: f64) -> f64 {
     let sail_spec = &self.specs.sails[sail_index];
     let max_sail_angle = find_angle(sail_spec.width, sail_spec.width, self.mainsheet_lengths[sail_index]);
     let hull_relative_apparent_wind_angle = bound_angle(invert_angle(apparent_wind_angle) - self.heading);
@@ -167,18 +173,7 @@ impl AdjustableShip {
 }
 impl Ship for AdjustableShip {
   fn update(&mut self, wind_angle: f64, wind_speed: f64) {
-    let mass_hull = DENSITY_WOOD * self.specs.hull_thickness * (
-      self.specs.hull_length * self.specs.hull_width // Bottom
-      + 2.0 * self.specs.hull_width * self.specs.hull_depth // Two Sides
-      + 2.0 * self.specs.hull_length * self.specs.hull_depth // Front & Back
-    );
-    let mass_sails: f64 = self.specs.sails.iter().map(|sail| {
-      let sail_mass = DENSITY_SAIL * sail.width * sail.height * 0.5; // Half because triangle
-      let sail_thickness = 0.01 * sail.width * sail.height; // Guessing a mast needs to be about 1 cm thick for every square meter of sail
-      let mast_mass = DENSITY_WOOD * sail.height * sail_thickness * sail_thickness;
-      return sail_mass + mast_mass;
-    }).sum();
-    let inverse_mass = 1.0 / (mass_hull + mass_sails);
+    let inverse_mass = 1.0 / (self.specs.calculate_mass());
 
     self.forces(wind_angle, wind_speed).iter().for_each(|force| {
       // A force always changes the velocity
@@ -214,8 +209,8 @@ impl Ship for AdjustableShip {
         let aoa = bound(self.heading + sail_angle - apparent_wind_angle, 0.0, PI);
         let (lift, drag) = calculate_aero_force_vecs(aoa, sail_area, DENSITY_AIR, apparent_wind);
         let sail_center = self.loc
-          + Vec2D::new(MAST_OFFSET, 0.0).rotate(self.heading)
-          + Vec2D::new(-SAIL_WIDTH*SAIL_AERO_CENTER, 0.0).rotate(self.heading + sail_angle);
+          + Vec2D::new(self.specs.sails[sail_index].mast_offset, 0.0).rotate(self.heading)
+          + Vec2D::new(-self.specs.sails[sail_index].width*SAIL_AERO_CENTER, 0.0).rotate(self.heading + sail_angle);
         forces.push(Force::new(String::from(format!("Sail {} Lift", sail_index)), sail_center, lift));
         forces.push(Force::new(String::from(format!("Sail {} Drag", sail_index)), sail_center, drag));
       }
@@ -269,7 +264,7 @@ impl Ship for AdjustableShip {
       let bow_water_vel = water_vel + bow_water_rot_vel;
       let aoa: f64 = bound(self.heading - bow_water_vel.to_angle(), 0.0, PI);
       let apparent_width = f64::cos(aoa).abs() * self.specs.hull_width + f64::sin(aoa).abs() * self.specs.hull_length * 0.5;
-      let wetted_area = HULL_DEPTH * apparent_width;
+      let wetted_area = self.specs.hull_depth * apparent_width;
       let drag_magnitude = calculate_force(HULL_FRICTION_COEFFICIENT, wetted_area, DENSITY_WATER, bow_water_vel.magnitude());
       let drag = bow_water_vel.unit().scale(drag_magnitude);
       let offset = Vec2D::from_angle(self.heading).scale(self.specs.hull_length * 0.5);
@@ -279,7 +274,7 @@ impl Ship for AdjustableShip {
       let stern_water_vel = water_vel + stern_water_rot_vel;
       let aoa: f64 = bound(self.heading - stern_water_vel.to_angle(), 0.0, PI);
       let apparent_width = f64::cos(aoa).abs() * self.specs.hull_width + f64::sin(aoa).abs() * self.specs.hull_length * 0.5;
-      let wetted_area = HULL_DEPTH * apparent_width;
+      let wetted_area = self.specs.hull_depth * apparent_width;
       let drag_magnitude = calculate_force(HULL_FRICTION_COEFFICIENT, wetted_area, DENSITY_WATER, stern_water_vel.magnitude());
       let drag = stern_water_vel.unit().scale(drag_magnitude);
       let offset = Vec2D::from_angle(self.heading).scale(self.specs.hull_length * 0.5);

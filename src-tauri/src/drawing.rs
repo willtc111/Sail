@@ -1,12 +1,10 @@
 use serde::Serialize;
 
 use crate::{
-  geometry::Vec2D, physics::Force, ship::{AdjustableShip, HULL_LENGTH, HULL_WIDTH, MAST_OFFSET, RUDDER_LENGTH, SAIL_WIDTH}
+  geometry::Vec2D, physics::Force, ship::AdjustableShip
 };
 
 // Ship drawing constants
-const HALF_HULL_WIDTH: f64 = HULL_WIDTH / 2.0;
-const HALF_HULL_LENGTH: f64 = HULL_LENGTH / 2.0;
 const LINE_THICKNESS: f64 = 0.5;
 
 #[derive(Debug, Clone, Serialize)]

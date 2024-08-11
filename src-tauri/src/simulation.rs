@@ -6,7 +6,7 @@ use tauri::State;
 
 use crate::geometry::Vec2D;
 use crate::drawing::AdjustableShipShape;
-use crate::ship::{AdjustableShip, Ship, ShipSpecs, HULL_LENGTH};
+use crate::ship::{AdjustableShip, Ship, ShipSpecs};
 
 pub const DELTA_TIME: f64 = 1.0 / 30.0; // seconds
 
@@ -150,7 +150,7 @@ pub fn get_ship_id(sim: State<Mutex<Simulation>>, loc: Vec2D) -> Option<usize> {
   let sim = sim.lock().unwrap();
   for i in 0..sim.get_population().len() {
     let ship = &sim.get_population()[i];
-    if ship.loc.dist(loc) < HULL_LENGTH / 2.0 {
+    if ship.loc.dist(loc) < ship.specs.hull_length / 2.0 {
       return Some(i);
     }
   }
